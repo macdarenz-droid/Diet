@@ -23,5 +23,7 @@ const sw = readFileSync('dist/sw.js', 'utf8');
 const files = JSON.parse(sw.match(/const FILES = (\[.*?\]);/s)[1]);
 const refs = [...html.matchAll(/(?:src|href)="\.\/([^"]+)"/g)].map(m => m[1]);
 for (const r of refs) if (!files.includes(r)) fail(`index.html loads ${r}, which the service worker does not precache`);
-console.log(`verify-dist: service worker precaches all ${refs.length} files the page loads`);
+const foods = JSON.parse(readFileSync('src/nutrition/foods.ts', 'utf8').match(/FOOD_FILES = (\[[^\]]+\])/)[1].replace(/'/g, '"'));
+for (const f of foods) if (!files.includes(f)) fail(`the food table ${f} is not precached`);
+console.log(`verify-dist: service worker precaches all ${refs.length} files the page loads and ${foods.length} food tables`);
 console.log(`verify-dist: CSP ok (connect-src ${hosts.join(', ')}; ${styles.length} inline style hash)`);

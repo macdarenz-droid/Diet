@@ -6,7 +6,6 @@ import { costUsd, keys, prefs, profile, usage } from '@/core/store';
 import { monthKey } from '@/core/dates';
 import { energy, fmt, fromEnergy } from '@/core/units';
 import { clearMeals, eraseAll } from '@/core/db';
-import { clearLookupCache } from '@/nutrition/lookup';
 import { PRICE } from '@/ai/config';
 import { Button, Choices, Section, Segmented, Switch } from '@/ui/primitives';
 import { Chevron, Key, Trash } from '@/ui/icons';
@@ -64,8 +63,8 @@ function ClearSheet({ onClose }: { onClose: () => void }) {
     <Sheet title="Clear food log" onClose={onClose}>
       {close => (
         <div class="stack">
-          <p class="muted clear-copy">Deletes every logged meal and every saved food lookup on this device.</p>
-          <Button variant="danger" block onClick={async () => { await clearMeals(); clearLookupCache(); meals.value = []; close(); toast('Food log cleared'); }}><Trash />Delete all meals</Button>
+          <p class="muted clear-copy">Deletes every logged meal on this device.</p>
+          <Button variant="danger" block onClick={async () => { await clearMeals(); meals.value = []; close(); toast('Food log cleared'); }}><Trash />Delete all meals</Button>
         </div>
       )}
     </Sheet>
@@ -76,7 +75,7 @@ function EraseSheet({ onClose }: { onClose: () => void }) {
   return (
     <Sheet title="Erase all data" onClose={onClose}>
       <div class="stack">
-        <p class="muted clear-copy">Deletes meals, profile, keys, usage and saved lookups from this device, then restarts the app.</p>
+        <p class="muted clear-copy">Deletes meals, weights, profile, key and usage from this device, then restarts the app.</p>
         <Button variant="danger" block onClick={() => { void eraseAll(); }}><Trash />Erase everything</Button>
       </div>
     </Sheet>
@@ -125,17 +124,12 @@ export function Profile() {
         </div>
       </Section>
 
-      <Section title="Keys" i={7}>
+      <Section title="Key" i={7}>
         <div class="list">
           <button class="li" onClick={() => { tap(); keySheet.value = 'claude'; }}>
             <span class="key-icon"><Key /></span>
             <span class="grow"><span class="title">Claude</span><span class="meta">{k.claude ? maskKey(k.claude) : 'Not added'}</span></span>
             <span class="end">{k.claude && <span class="chip mono"><span class="dot ok" />Added</span>}<Chevron class="chev" /></span>
-          </button>
-          <button class="li" onClick={() => { tap(); keySheet.value = 'usda'; }}>
-            <span class="key-icon"><Key /></span>
-            <span class="grow"><span class="title">Food database</span><span class="meta">{k.usda ? maskKey(k.usda) : 'Not added'}</span></span>
-            <span class="end">{k.usda && <span class="chip mono"><span class="dot ok" />Added</span>}<Chevron class="chev" /></span>
           </button>
         </div>
       </Section>

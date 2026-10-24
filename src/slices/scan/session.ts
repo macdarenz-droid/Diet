@@ -4,7 +4,7 @@ import type { Analysis, Item, Meal } from '@/core/models';
 import { keys, profile, recordUsage } from '@/core/store';
 import { AnalysisError, type Stage } from '@/ai/errors';
 import type { Answer, Edits } from '@/ai/prompts';
-import { groundAll, localCache, type GroundStatus } from '@/nutrition/lookup';
+import { groundAll, type GroundStatus } from '@/nutrition/lookup';
 import { rankSwaps, totals } from '@/nutrition/math';
 import type { Prepared } from './image';
 
@@ -94,7 +94,7 @@ async function run(id: string, previousAnswers?: Answer[]): Promise<void> {
     }
     patch(id, { step: 'ground' });
     const lists = [analysis.items, ...analysis.swaps.map(w => w.items)];
-    const { value, status } = await groundAll(lists, { key: keys.value.usda, cache: localCache(), signal: c.signal });
+    const { value, status } = await groundAll(lists, { signal: c.signal });
     if (c.signal.aborted) return;
     const [items, ...swapItems] = value;
     const edits = scan.value?.edits ?? s.edits;

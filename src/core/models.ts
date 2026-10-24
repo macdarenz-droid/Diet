@@ -16,7 +16,7 @@ export interface Nutrients {
 export const NUTRIENT_KEYS = ['kcal', 'protein', 'carbs', 'fat', 'satFat', 'fibre', 'sugars', 'sodium'] as const satisfies readonly (keyof Nutrients)[];
 export type NutrientKey = (typeof NUTRIENT_KEYS)[number];
 
-export type Source = 'label' | 'usda' | 'estimate';
+export type Source = 'label' | 'database' | 'estimate';
 
 export interface Item {
   name: string;
@@ -26,8 +26,8 @@ export interface Item {
   gramsHigh: number;
   per100: Nutrients;
   source: Source;
-  /** Present when source is 'usda'. */
-  usda?: { fdcId: number; description: string };
+  /** Present when source is 'database': the offline food it was matched to (docs/FOOD-DATA.md). */
+  food?: { id: number; description: string; dataset: string };
   /** Claude's own per-100 g values, kept when another source wins, so a regrounding can compare. */
   estimate: Nutrients;
   query: string;
@@ -100,6 +100,22 @@ export interface Targets {
   sodium: number;
 }
 
+export type Sex = 'male' | 'female';
+export type Activity = 'sedentary' | 'light' | 'moderate' | 'vigorous';
+export type Pace = 'gentle' | 'steady' | 'fast';
+
+/** Body details for the metabolism engine (owner, 2026-10-24: "put info from user: sex, age, kg,
+ * height"). Weight is not stored here; it comes from the weigh-in log. */
+export interface Body {
+  sex: Sex;
+  birthYear: number;
+  heightCm: number;
+  activity: Activity;
+  bodyFatPct?: number;
+  pregnant?: boolean;
+  breastfeeding?: boolean;
+}
+
 export interface Profile {
   goal: Goal;
   diet: Diet;
@@ -107,11 +123,20 @@ export interface Profile {
   region: Region;
   unit: EnergyUnit;
   targets: Targets;
+  body?: Body;
+  /** Energy and protein targets come from the metabolism engine when the body details are complete. */
+  autoTargets: boolean;
+  pace: Pace;
+}
+
+/** One weigh-in (IndexedDB `weighins`, keyed by time). */
+export interface WeighIn {
+  at: number;
+  kg: number;
 }
 
 export interface Keys {
   claude: string;
-  usda: string;
 }
 
 export interface Prefs {

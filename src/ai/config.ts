@@ -16,5 +16,4 @@ export const PRICE = { input: 4, output: 20, cacheRead: 0.2, cacheWrite: 5 } as 
 
 export const KEY_PAGES = {
   claude: 'https://platform.claude.com/settings/keys',
-  usda: 'https://fdc.nal.usda.gov/api-key-signup/',
 } as const;

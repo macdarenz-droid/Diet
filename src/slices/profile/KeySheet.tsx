@@ -6,12 +6,11 @@ import { Sheet } from '@/ui/Sheet';
 import { Button } from '@/ui/primitives';
 import { Arrow } from '@/ui/icons';
 
-export type Which = 'claude' | 'usda';
+export type Which = 'claude';
 export const keySheet = signal<Which | null>(null);
 
 const COPY: Record<Which, { title: string; placeholder: string; link: string }> = {
   claude: { title: 'Claude key', placeholder: 'sk-ant-…', link: 'Get a Claude key' },
-  usda: { title: 'Food database key', placeholder: 'API key', link: 'Get a key' },
 };
 
 export function maskKey(k: string): string {

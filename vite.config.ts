@@ -1,7 +1,7 @@
 import { defineConfig, type Plugin } from 'vitest/config';
 import preact from '@preact/preset-vite';
 import { fileURLToPath } from 'node:url';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 
 const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8')) as { version: string };
@@ -42,7 +42,9 @@ function pwa(): Plugin {
       // Fonts: only the Latin subsets are precached; others load on demand if ever used.
       const files = Object.keys(bundle).filter(f => !f.endsWith('.map') && (!f.endsWith('.woff2') || /-latin-(opsz|wght)-/.test(f)));
       const extra = ['./', 'index.html', 'manifest.webmanifest', 'boot.js', 'icon-192.png', 'icon-512.png', 'icon-maskable-512.png', 'apple-touch-icon.png'];
-      const list = [...new Set([...extra, ...files])];
+      // The offline food tables (docs/FOOD-DATA.md): content-hashed names, so new data means a new cache.
+      const foods = readdirSync(new URL('./public/data', import.meta.url)).filter(f => f.endsWith('.json')).map(f => `data/${f}`);
+      const list = [...new Set([...extra, ...foods, ...files])];
       const version = createHash('sha256').update(pkg.version + list.join('|')).digest('hex').slice(0, 12);
       const sw = readFileSync(new URL('./src/sw.template.js', import.meta.url), 'utf8')
         .replace('__VERSION__', version)

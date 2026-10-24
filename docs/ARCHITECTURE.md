@@ -26,11 +26,10 @@ These are the only hosts a build may contact. `index.html` sets a Content-Securi
 | Host | Why | Sends |
 |---|---|---|
 | `api.anthropic.com` | analysis and swaps | the photo (downscaled JPEG) or text, profile preferences, the user's Claude key |
-| `api.nal.usda.gov` | nutrient data | a generic food name such as "rice, fried" and the user's USDA key |
 
 Fonts and icons are bundled; no third-party scripts, analytics or font CDNs.
 
-Verified on 2026-10-24 from this repo's container: both hosts answer browser CORS preflights (`access-control-allow-origin: *`), and Anthropic's preflight allows the `anthropic-dangerous-direct-browser-access` header that the SDK's `dangerouslyAllowBrowser` option sends.
+Verified on 2026-10-24 from this repo's container: Anthropic's CORS preflight answers `access-control-allow-origin: *` and allows the `anthropic-dangerous-direct-browser-access` header that the SDK's `dangerouslyAllowBrowser` option sends. Food data is bundled (same origin), so no food lookup leaves the device.
 
 ## 3. Stack
 

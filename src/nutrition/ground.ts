@@ -1,6 +1,6 @@
 // Grounding: replace Claude's per-100 g estimates with USDA values where a close match exists.
 import type { Item, Nutrients } from '@/core/models';
-import type { Candidate } from './fdc';
+import type { Candidate } from './candidate';
 
 /** A candidate whose energy is more than this fraction away from the estimate is rejected. */
 export const MAX_ENERGY_OFF = 0.6;
@@ -40,9 +40,12 @@ export function energyFits(candidateKcal: number, estimateKcal: number): boolean
 /** The best candidate for an item, or null to keep the estimate. */
 export function choose(query: string, estimate: Nutrients, candidates: readonly Candidate[]): Candidate | null {
   let best: { c: Candidate; s: number } | null = null;
+  // Offline search results carry a relevance score that weighs rare words and local aliases; it is
+  // relative, so it is read against the best result. Plain candidates fall back to word overlap.
+  const top = Math.max(0, ...candidates.map(c => c.score ?? 0));
   for (const c of candidates) {
     if (!energyFits(c.per100.kcal, estimate.kcal)) continue;
-    const name = nameScore(query, c.description);
+    const name = c.score !== undefined && top > 0 ? Math.max(c.score / top, nameScore(query, c.description)) : nameScore(query, c.description);
     if (name < 0.5) continue;
     const off = estimate.kcal > LOW_KCAL ? Math.abs(Math.log(Math.max(c.per100.kcal, 1) / estimate.kcal)) : 0;
     const s = name - 0.5 * off - 0.02 * c.rank;
@@ -53,9 +56,9 @@ export function choose(query: string, estimate: Nutrients, candidates: readonly 
 
 export function applyCandidate(item: Item, c: Candidate | null): Item {
   if (item.source === 'label') return item;
-  if (!c) return { ...item, per100: item.estimate, source: 'estimate', usda: undefined };
+  if (!c) return { ...item, per100: item.estimate, source: 'estimate', food: undefined };
   // Nutrients the source does not report come from the estimate rather than reading as zero.
   const per100 = { ...c.per100 };
   for (const k of c.missing ?? []) per100[k] = item.estimate[k];
-  return { ...item, per100, source: 'usda', usda: { fdcId: c.fdcId, description: c.description } };
+  return { ...item, per100, source: 'database', food: { id: c.fdcId, description: c.description, dataset: c.dataType } };
 }

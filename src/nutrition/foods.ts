@@ -2,7 +2,8 @@
 // returns the same Candidate shape as the USDA client, so ground.ts can choose among them.
 // Sources, licences, normalisation and the file schema: docs/FOOD-DATA.md.
 import { NUTRIENT_KEYS, type NutrientKey, type Nutrients } from '@/core/models';
-import type { Candidate } from './fdc';
+import type { Candidate } from './candidate';
+import { stem } from './ground';
 
 // Written by scripts/foods/build.mjs. The names carry a content hash, so a rebuilt table is never
 // served from an old cache. Paths are relative to the app's base URL.
@@ -51,12 +52,8 @@ const STOP = new Set(['and', 'with', 'or', 'in', 'of', 'the', 'a', 'an', 'to', '
 /** Words that name the usual form of a food; a name is not ranked lower for carrying them. */
 const NEUTRAL = new Set(['raw', 'fresh', 'plain', 'average', 'regular', 'commercial']);
 const letter = (c: string | undefined) => c !== undefined && c >= 'a' && c <= 'z';
-/** The same folding as ground.ts: "-ies" to "-y", then a final "s" after three letters dropped. */
-function singular(t: string): string {
-  if (t.endsWith('ies')) return `${t.slice(0, -3)}y`;
-  const n = t.length;
-  return n >= 4 && t[n - 1] === 's' && letter(t[n - 2]) && letter(t[n - 3]) && letter(t[n - 4]) ? t.slice(0, -1) : t;
-}
+/** The same folding as ground.ts, so a name that matches here also overlaps there. */
+const singular = stem;
 
 function plain(s: string): string {
   const t = /[^\x00-\x7f]/.test(s) ? s.normalize('NFKD').replace(/\p{M}+/gu, '') : s;

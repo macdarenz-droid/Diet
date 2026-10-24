@@ -11,7 +11,7 @@ import { monthKey } from './dates';
 export const DEFAULT_TARGETS = { energy: 2000, protein: 0, fibre: 30, sugars: 50, sodium: 2000 };
 
 export function defaultProfile(region: Region = 'AU'): Profile {
-  return { goal: 'lose', diet: 'any', avoid: '', region, unit: region === 'AU' ? 'kJ' : 'kcal', targets: { ...DEFAULT_TARGETS } };
+  return { goal: 'lose', diet: 'any', avoid: '', region, unit: region === 'AU' ? 'kJ' : 'kcal', targets: { ...DEFAULT_TARGETS }, autoTargets: true, pace: 'steady' };
 }
 
 const KEYS = { profile: 'nuance.profile', keys: 'nuance.keys', prefs: 'nuance.prefs', usage: 'nuance.usage' } as const;
@@ -49,7 +49,7 @@ function guessRegion(): Region {
 const base = defaultProfile(guessRegion());
 const storedProfile = typeof localStorage === 'undefined' ? base : read<Profile>(KEYS.profile, base);
 export const profile = persisted<Profile>(KEYS.profile, { ...storedProfile, targets: { ...DEFAULT_TARGETS, ...storedProfile.targets } });
-export const keys = persisted<Keys>(KEYS.keys, { claude: '', usda: '' });
+export const keys = persisted<Keys>(KEYS.keys, { claude: '' });
 export const prefs = persisted<Prefs>(KEYS.prefs, { theme: 'night', reduceMotion: false });
 export const usage = persisted<UsageMonth[]>(KEYS.usage, []);
 

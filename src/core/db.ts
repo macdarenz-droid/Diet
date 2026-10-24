@@ -1,9 +1,11 @@
 // The meal log in IndexedDB (database `nuance`, store `meals`). Owner-gated (AGENTS.md).
-import type { Meal } from './models';
+import type { Meal, WeighIn } from './models';
 
 const DB = 'nuance';
 const STORE = 'meals';
-const VERSION = 1;
+const WEIGHINS = 'weighins';
+/** 2 adds the weigh-in log (owner, 2026-10-24). */
+const VERSION = 2;
 
 let opening: Promise<IDBDatabase> | null = null;
 
@@ -14,6 +16,7 @@ function open(): Promise<IDBDatabase> {
     req.onupgradeneeded = () => {
       const db = req.result;
       if (!db.objectStoreNames.contains(STORE)) db.createObjectStore(STORE, { keyPath: 'id' }).createIndex('at', 'at');
+      if (!db.objectStoreNames.contains(WEIGHINS)) db.createObjectStore(WEIGHINS, { keyPath: 'at' });
     };
     req.onsuccess = () => {
       const db = req.result;
@@ -27,10 +30,10 @@ function open(): Promise<IDBDatabase> {
   return opening;
 }
 
-function tx<T>(mode: IDBTransactionMode, run: (s: IDBObjectStore) => IDBRequest<T>): Promise<T> {
+function tx<T>(mode: IDBTransactionMode, run: (s: IDBObjectStore) => IDBRequest<T>, store = STORE): Promise<T> {
   return open().then(db => new Promise<T>((resolve, reject) => {
-    const t = db.transaction(STORE, mode);
-    const req = run(t.objectStore(STORE));
+    const t = db.transaction(store, mode);
+    const req = run(t.objectStore(store));
     t.oncomplete = () => resolve(req.result);
     t.onerror = () => reject(t.error);
     t.onabort = () => reject(t.error);
@@ -47,10 +50,15 @@ export const putMeal = (m: Meal): Promise<IDBValidKey> => tx('readwrite', s => s
 export const deleteMeal = (id: string): Promise<undefined> => tx('readwrite', s => s.delete(id));
 export const clearMeals = (): Promise<undefined> => tx('readwrite', s => s.clear());
 
+export const allWeighIns = (): Promise<WeighIn[]> => tx('readonly', s => s.getAll() as IDBRequest<WeighIn[]>, WEIGHINS).then(l => l.sort((a, b) => a.at - b.at));
+export const putWeighIn = (w: WeighIn): Promise<IDBValidKey> => tx('readwrite', s => s.put(w), WEIGHINS);
+export const deleteWeighIn = (at: number): Promise<undefined> => tx('readwrite', s => s.delete(at), WEIGHINS);
+export const clearWeighIns = (): Promise<undefined> => tx('readwrite', s => s.clear(), WEIGHINS);
+
 /** Removes everything Nuance stores on this device (meals, profile, keys, usage, lookups, offline
  * copy), then reloads into a fresh app. */
 export async function eraseAll(): Promise<void> {
-  try { await clearMeals(); } catch { /* database blocked */ }
+  try { await clearMeals(); await clearWeighIns(); } catch { /* database blocked */ }
   try { for (const k of Object.keys(localStorage)) if (k.startsWith('nuance.')) localStorage.removeItem(k); } catch { /* storage blocked */ }
   try { for (const k of await caches.keys()) if (k.startsWith('nuance-')) await caches.delete(k); } catch { /* no Cache Storage */ }
   location.reload();
