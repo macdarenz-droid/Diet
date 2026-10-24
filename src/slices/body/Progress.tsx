@@ -151,7 +151,7 @@ export function Progress() {
   const p = profile.value;
   const a = assessment.value;
   const words = a
-    ? a.insights.filter(x => x.id !== 'excluded').slice(0, INSIGHTS_SHOWN).map(x => word(x, { unit: p.unit, weightKg: a.weightKg, auto: activeTargets.value.auto }))
+    ? a.insights.slice(0, INSIGHTS_SHOWN).map(x => word(x, { unit: p.unit, weightKg: a.weightKg, auto: activeTargets.value.auto }))
     : [];
   const open = () => { tap(); setLogging(true); };
   return (

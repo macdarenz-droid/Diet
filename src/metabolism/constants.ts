@@ -52,6 +52,10 @@ export const MIN_SPAN_DAYS = 14;
 export const MIN_COVERAGE = 0.5;
 /** Intake change between the halves of a window above which glycogen and water shifts make it unusable. */
 export const STEADY_KCAL = 300;
+/** A window whose measured expenditure is under this multiple of resting expenditure is read as missing
+ * meals in the log, not as a real value: FAO's lowest lifestyle band starts at 1.40 [FAO 2004], and 1.2
+ * leaves room for error (a Nuance threshold, docs section 6). */
+export const MIN_MEASURED_PAL = 1.2;
 export const CONFIDENCE_WEIGHT = { medium: 0.4, high: 0.65 } as const;
 /** Allowed real change in expenditure per window, as a share (a design choice, docs section 6, rule 6). */
 export const DRIFT_PER_WINDOW = 0.05;
@@ -68,6 +72,12 @@ export const FLOOR_KCAL: Record<Sex, number> = { female: 1200, male: 1500 };
 
 // BMI bands [WHO NLiS]: under 18.5 is underweight, 25 and over overweight.
 export const UNDERWEIGHT_BMI = 18.5;
+/** Height and weight giving a BMI outside this range are taken as a typing error (a Nuance plausibility
+ * bound, not a clinical cut-off). */
+export const PLAUSIBLE_BMI = [12, 100] as const;
+/** Largest planned deficit, kcal/day. Guideline prescriptions are 500 to 750 [Jensen 2014]; 1,000 keeps the
+ * fast pace for most people while 1% a week of a large body would ask for far more (a Nuance threshold). */
+export const MAX_DEFICIT_KCAL = 1000;
 export const OVERWEIGHT_BMI = 25;
 export const ADULT_AGE = 18;
 

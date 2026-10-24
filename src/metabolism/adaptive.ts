@@ -1,6 +1,6 @@
 // Expenditure measured from the person's own data: energy in (logged) minus the change in body energy
 // stores (trend slope x energy density), blended with the equation estimate by precision.
-import { CONFIDENCE_WEIGHT, DRIFT_PER_WINDOW, GLYCOGEN_SKIP_DAYS, MIN_COVERAGE, MIN_SPAN_DAYS, MIN_WEIGH_INS, STEADY_KCAL, WINDOW_DAYS } from './constants';
+import { CONFIDENCE_WEIGHT, DRIFT_PER_WINDOW, GLYCOGEN_SKIP_DAYS, MIN_COVERAGE, MIN_SPAN_DAYS, MIN_WEIGH_INS, STEADY_KCAL, WINDOW_DAYS, MIN_MEASURED_PAL } from './constants';
 import { compositionAt, energyDensity, referenceComposition, restingExpenditure, totalExpenditure } from './energy';
 import { currentTrendKg, dayKeyOf, dayNumber, trendFit, weighInDays } from './trend';
 import type { BodyProfile, Confidence, DayIntake, ExpenditureEstimate, ObservedExpenditure, WeighIn } from './types';
@@ -59,6 +59,7 @@ export function observedExpenditure(i: WindowInput): ObservedExpenditure | null 
   const early = days.filter(([n]) => n < split).map(([, d]) => d.kcal);
   const late = days.filter(([n]) => n >= split).map(([, d]) => d.kcal);
   const steady = early.length >= 3 && late.length >= 3 && Math.abs(mean(early) - mean(late)) <= STEADY_KCAL;
+  const restingKcal = restingExpenditure(i.profile, i.age, fit.midKg).kcal;
   return {
     kcal,
     seKcal,
@@ -72,6 +73,8 @@ export function observedExpenditure(i: WindowInput): ObservedExpenditure | null 
     midKg: fit.midKg,
     energyDensity: rho,
     steady,
+    plausible: kcal >= MIN_MEASURED_PAL * restingKcal,
+    restingKcal,
   };
 }
 
@@ -106,7 +109,8 @@ export function windows(weighIns: readonly WeighIn[], today: number, windowDays:
  * Maintenance expenditure as a running estimate (a one-state Kalman filter). It starts from the equation
  * estimate and its spread. Each window then (1) carries the estimate to the window's trend weight by the
  * resting equation's ratio, (2) widens it by DRIFT_PER_WINDOW for real change in activity or adaptation, and
- * (3) combines it with the back-calculated value, each weighted by 1 / variance. Unsteady windows only carry.
+ * (3) combines it with the back-calculated value, each weighted by 1 / variance. Unsteady windows, and
+ * windows too low to be real (meals missing from the log), only carry.
  * With one window this is the plain precision-weighted blend of prior and observation.
  */
 export function estimateExpenditure(i: EstimateInput): ExpenditureEstimate {
@@ -128,7 +132,7 @@ export function estimateExpenditure(i: EstimateInput): ExpenditureEstimate {
     }
     atKg = obs.midKg;
     lastK = k;
-    if (!obs.steady) continue;
+    if (!obs.steady || !obs.plausible) continue;
     const r = obs.seKcal ** 2;
     const gain = p / (p + r);
     x += gain * (obs.kcal - x);

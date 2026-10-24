@@ -1,5 +1,5 @@
 // Daily energy and protein targets per goal, with the safety rules (docs/METABOLISM.md, section 9).
-import { ADULT_AGE, FLOOR_KCAL, GAIN_RATE, LOSS_RATE, OVERWEIGHT_BMI, PAL, PROTEIN, UNDERWEIGHT_BMI } from './constants';
+import { ADULT_AGE, FLOOR_KCAL, GAIN_RATE, LOSS_RATE, MAX_DEFICIT_KCAL, OVERWEIGHT_BMI, PAL, PLAUSIBLE_BMI, PROTEIN, UNDERWEIGHT_BMI } from './constants';
 import { ageYears, bmi, compositionAt, deurenbergFatPct, energyDensity, referenceComposition, totalExpenditure } from './energy';
 import { dayNumber } from './trend';
 import type { BodyProfile, DailyTargets, DayKey, ExclusionReason, Goal, TargetLimit } from './types';
@@ -11,6 +11,8 @@ export function screen(p: BodyProfile, age: number): ExclusionReason | null {
   const fatOk = p.bodyFatPct === undefined || (finite(p.bodyFatPct) && p.bodyFatPct >= 3 && p.bodyFatPct <= 70);
   if ((p.sex !== 'male' && p.sex !== 'female') || !Object.prototype.hasOwnProperty.call(PAL, p.activity)) return 'invalid';
   if (!finite(p.heightCm) || p.heightCm < 100 || p.heightCm > 250 || !finite(p.weightKg) || p.weightKg < 25 || p.weightKg > 350 || !finite(age) || age > 120 || !fatOk) return 'invalid';
+  const b = bmi(p.weightKg, p.heightCm);
+  if (b < PLAUSIBLE_BMI[0] || b > PLAUSIBLE_BMI[1]) return 'invalid';
   if (age < ADULT_AGE) return 'under-18';
   if (p.pregnant) return 'pregnant';
   if (p.breastfeeding) return 'breastfeeding';
@@ -71,7 +73,9 @@ export function dailyTargets(i: TargetInput): DailyTargets {
     else {
       let r = requested;
       if (r > LOSS_RATE.max) { r = LOSS_RATE.max; limits.push('max-rate'); }
-      target = m - r * perPct;
+      let deficit = r * perPct;
+      if (deficit > MAX_DEFICIT_KCAL) { deficit = MAX_DEFICIT_KCAL; limits.push('max-deficit'); }
+      target = m - deficit;
       if (target < floorKcal) { target = Math.min(m, floorKcal); limits.push('floor'); }
     }
     // Round up: a smaller deficit never breaks the rate cap or the floor.

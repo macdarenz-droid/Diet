@@ -101,6 +101,10 @@ export interface ObservedExpenditure {
   energyDensity: number;
   /** False when intake moved by more than the steadiness limit between the window's halves. */
   steady: boolean;
+  /** False when the value is under MIN_MEASURED_PAL x resting expenditure: meals are missing from the log. */
+  plausible: boolean;
+  /** Resting expenditure at the window's weight, kcal/day. */
+  restingKcal: number;
 }
 
 export type Confidence = 'none' | 'low' | 'medium' | 'high';
@@ -116,7 +120,7 @@ export interface ExpenditureEstimate {
   confidence: Confidence;
 }
 
-export type TargetLimit = 'max-rate' | 'floor' | 'underweight' | 'no-surplus';
+export type TargetLimit = 'max-rate' | 'max-deficit' | 'floor' | 'underweight' | 'no-surplus';
 
 export interface DailyTargets {
   goal: Goal;
@@ -189,6 +193,7 @@ interface Base<K extends string, N> {
 export type Insight =
   | (Base<'excluded', Record<string, never>> & { reason: ExclusionReason })
   | Base<'underweight', { bmi: number }>
+  | Base<'partial-log', { meanIntakeKcal: number; restingKcal: number; loggedDays: number }>
   | Base<'need-data', { windowDays: number; loggedDays: number; weighIns: number; minLoggedDays: number; minWeighIns: number }>
   | Base<'intake-below-floor', { meanIntakeKcal: number; floorKcal: number; days: number }>
   | Base<'rate-too-fast', { ratePctPerWeek: number; maxPctPerWeek: number; days: number }>

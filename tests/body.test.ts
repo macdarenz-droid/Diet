@@ -2,7 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Action, BodyProfile, Insight, WeighIn } from '@/metabolism';
 import { assess, compositionAt, energyDensity, KIND_ORDER, mifflinStJeor, referenceComposition, trendWeights } from '@/metabolism';
-import { PACE, PARTIAL_DAY_KCAL, bodyProfile, complete, intakesFrom, logWeight, paceFor, restoreWeight, weekChange, weighIns } from '@/slices/body/body';
+import { PACE, PARTIAL_DAY_KCAL, birthYears, bodyProfile, complete, intakesFrom, logWeight, paceFor, restoreWeight, weekChange, weighIns } from '@/slices/body/body';
 import { word, wordAction, wordPace, type WordContext } from '@/slices/body/words';
 import { purgeLegacy } from '@/core/store';
 import { parseKg } from '@/slices/body/WeightSheet';
@@ -28,6 +28,7 @@ const ALL: Insight[] = [
     action: cause === 'logging-gaps' ? { kind: 'log-consistently', days: 28 } : cause === 'intake-rise' ? { kind: 'return-to-target', kcal: 1950 } : cause === 'adaptation' ? { kind: 'diet-break', weeks: 2, kcal: 2300 } : { kind: 'reduce-intake', kcal: 1900 },
     also: [walk, train],
   })),
+  { id: 'partial-log', severity: 'medium', numbers: { meanIntakeKcal: 920, restingKcal: 1450, loggedDays: 24 }, action: { kind: 'log-consistently', days: 28 }, also: [] },
   { id: 'diet-break', severity: 'medium', trigger: 'milestone', numbers: { lossPct: 10.2, weeksLosing: 14 }, action: { kind: 'diet-break', weeks: 2, kcal: 2500 }, also: [train, walk] },
   { id: 'diet-break', severity: 'medium', trigger: 'duration', numbers: { lossPct: 6, weeksLosing: 12 }, action: { kind: 'diet-break', weeks: 2, kcal: 2500 }, also: [train, walk] },
   { id: 'protein-low', severity: 'medium', numbers: { averageG: 82, targetG: 140, days: 13 }, action: { kind: 'raise-protein', grams: 58, targetGrams: 140 }, also: [train] },
@@ -63,12 +64,12 @@ describe('insight wording', () => {
 
   it('turns the rate into kilograms a week from the trend weight', () => {
     // 1.4% of 80 kg = 1.12 kg.
-    expect(word(ALL[3]!, kj).body).toContain('losing 1.1 kg a week');
-    expect(word(ALL[3]!, noWeight).body).toContain('losing 1.4% of your weight a week');
+    expect(word(ALL.find(i => i.id === 'rate-too-fast')!, kj).body).toContain('losing 1.1 kg a week');
+    expect(word(ALL.find(i => i.id === 'rate-too-fast')!, noWeight).body).toContain('losing 1.4% of your weight a week');
   });
 
   it('words the adaptation the owner described, in the chosen unit', () => {
-    const w = word(ALL[5]!, kj);
+    const w = word(ALL.find(i => i.id === 'adaptation')!, kj);
     expect(w.title).toBe('Metabolic adaptation');
     // 316 kcal = 1322 kJ, to the nearest 10. Only the gap is stated, so the card never shows two
     // different figures for what the body burns (the action's maintenance is the blended one).
@@ -87,7 +88,7 @@ describe('insight wording', () => {
   });
 
   it('calls a flat weight steady instead of a rounded-up change', () => {
-    expect(word(ALL[15]!, kcal).body).toBe('Your weight is steady against a plan to gain 0.2 kg a week.');
+    expect(word(ALL.find(i => i.id === 'rate-too-slow' && i.numbers.ratePctPerWeek === 0)!, kcal).body).toBe('Your weight is steady against a plan to gain 0.2 kg a week.');
   });
 
   it('gives each plateau cause its own explanation', () => {
@@ -96,6 +97,12 @@ describe('insight wording', () => {
     expect(bodies[1]).toContain('up 200 kcal');
     // Unexplained: a stable weight at an intake makes that intake the maintenance, whatever the details said.
     expect(bodies[3]).toBe('Your weight has held for 4 weeks at 2,150 kcal a day, which makes that your maintenance now.');
+  });
+
+  it('says why automatic targets are off', () => {
+    const off = (reason: 'under-18' | 'pregnant' | 'breastfeeding' | 'invalid') => word({ id: 'excluded', severity: 'high', reason, numbers: {}, action: none, also: [] }, kcal);
+    expect(off('pregnant')).toMatchObject({ title: 'Targets off', body: 'Automatic targets are off during pregnancy.', action: null });
+    expect(new Set((['under-18', 'pregnant', 'breastfeeding', 'invalid'] as const).map(r => off(r).body)).size).toBe(4);
   });
 
   it('marks on-track progress as good and nothing to change', () => {
@@ -127,6 +134,11 @@ describe('body details', () => {
     expect(complete({ sex: 'female', birthYear: 1990, heightCm: 168 })).toBe(false);
     expect(complete({ ...body, heightCm: 99 })).toBe(false);
     expect(complete({ ...body, birthYear: 1899 })).toBe(false);
+    const { min, max } = birthYears();
+    expect(max - min).toBe(110);
+    expect(complete({ ...body, birthYear: min - 1 })).toBe(false);
+    expect(complete({ ...body, birthYear: max + 1 })).toBe(false);
+    expect(complete({ ...body, birthYear: max })).toBe(true);
     expect(complete(body)).toBe(true);
   });
 

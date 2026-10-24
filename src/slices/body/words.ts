@@ -72,7 +72,10 @@ export function word(i: Insight, c: WordContext): Worded {
   });
   switch (i.id) {
     case 'excluded':
-      return out('Targets off', 'Energy and protein targets are set by hand.');
+      return out('Targets off', i.reason === 'under-18' ? 'Automatic targets start at 18.'
+        : i.reason === 'pregnant' ? 'Automatic targets are off during pregnancy.'
+        : i.reason === 'breastfeeding' ? 'Automatic targets are off while breastfeeding.'
+        : 'Check your height, weight and birth year in Profile.');
     case 'underweight':
       return out('Underweight', `Your BMI is ${fmt(i.numbers.bmi)}, so your target has no deficit.`);
     case 'intake-below-floor':
@@ -84,6 +87,10 @@ export function word(i: Insight, c: WordContext): Worded {
     case 'adaptation': {
       const n = i.numbers;
       return out('Metabolic adaptation', `You have lost ${fmt(n.lossPct)}% of your weight, and your body now burns ${w.perDay(n.gapKcal)} less than your new weight accounts for. After weight loss the body defends its fat stores: hunger rises and muscles do the same work on less energy.`);
+    }
+    case 'partial-log': {
+      const n = i.numbers;
+      return out('Incomplete log', `Your log averages ${w.perDay(n.meanIntakeKcal)} over ${w.days(n.loggedDays)}, under the ${w.e(n.restingKcal)} your body burns at rest, so some meals are missing from it.`);
     }
     case 'plateau': {
       const n = i.numbers;

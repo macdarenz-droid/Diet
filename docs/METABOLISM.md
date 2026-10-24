@@ -108,7 +108,7 @@ The owner's question: after a first, disciplined phase of about 10% loss, does t
 | Protein baseline | Average requirement 0.65 g/kg, allowance (97.5th percentile) 0.83 g/kg [Rand 2003, meta-analysis]. Over 65: at least 1.0 to 1.2 g/kg, 1.2 or more when active [Bauer 2013, PROT-AGE position paper]. | Strong (requirement); expert consensus (older adults) | 0.83 g/kg; 1.0 or 1.2 g/kg from 65 |
 | Resistance training | In obese older adults dieting, training 3 times a week prevented 93.5% of lean-mass loss [Sardeli 2018, meta-analysis, 6 RCTs]. Lean mass fell 2% to 3% with resistance or combined training vs 5% with aerobic only [Villareal 2017, RCT, n = 160]. It kept lean mass and resting expenditure after a 12 kg loss [Hunter 2008, RCT]. | Strong for lean mass | Suggest 3 sessions a week alongside breaks and stalls |
 | Steps | Mortality fell with more steps up to 6,000 to 8,000 a day (60 and over) and 8,000 to 10,000 (under 60) [Paluch 2022, 15 cohorts, 47,471 adults]. Long-term maintainers move more [Ostendorf 2019]. | Observational | Suggest 8,000 a day (6,000 from 60). No kcal-per-step figure, as none was verified |
-| Energy floor | Usual prescriptions are 1,200 to 1,500 kcal/day for women and 1,500 to 1,800 for men; diets under 800 kcal/day only with medical supervision [Jensen 2014, AHA/ACC/TOS guideline]. | Guideline | Never a deficit target below 1,200 (women) or 1,500 (men) |
+| Energy floor | Usual prescriptions are 1,200 to 1,500 kcal/day for women and 1,500 to 1,800 for men; diets under 800 kcal/day only with medical supervision [Jensen 2014, AHA/ACC/TOS guideline]. | Guideline | Never a deficit target below 1,200 (women) or 1,500 (men); no planned deficit above 1,000 kcal/day (a Nuance cap above the guideline's 500 to 750, so 1% a week of a large body never asks for more) |
 
 ## 6. Measuring real expenditure from the log
 
@@ -132,7 +132,8 @@ This is the idea behind Hall and Chow's method, which recovered intake changes f
 4. A window whose intake changed by more than 300 kcal/day between its halves is set aside (water and glycogen move with intake). This is a Nuance threshold.
 5. The trend slope comes from least squares with points beyond 3 SD removed. Its standard error is doubled for water swings that run over several days: with 28 daily weights and 0.5 kg noise this gives a 95% interval of about ±350 kcal/day, the figure Hall and Chow report for that design.
 6. Running estimate (a one-state Kalman filter): start from the formula and its spread; for each window carry the estimate to the window's weight by the resting equation, widen it by 5% for real change (a Nuance choice), and combine it with the window's value, each weighted by 1 / variance.
-7. Confidence is the share of the formula's variance the data has removed: none (no usable window), low (under 0.40), medium (0.40 to 0.65), high (0.65 and over).
+7. A window whose measured value is under 1.2 x resting expenditure is read as meals missing from the log and set aside (FAO's lowest lifestyle band starts at 1.40 [FAO 2004]; 1.2 is a Nuance threshold with room for error). The adaptation check needs both of its windows to pass this too. When the latest window fails it, the person sees an "incomplete log" insight instead of "intake below floor" or "need data".
+8. Confidence is the share of the formula's variance the data has removed: none (no usable window), low (under 0.40), medium (0.40 to 0.65), high (0.65 and over).
 
 So the first measured value can appear about 4 weeks after the first weigh-in (two weeks skipped, then two weeks of data). In simulations with daily weigh-ins and logs, one full 28-day window (6 weeks in) gave medium or high confidence, and 12 weeks gave high. In tests, with true expenditure 2,600 kcal/day and the formula saying about 2,940, 12 weeks of data brought the estimate within 150 kcal; the mean error over 20 random runs was under 60 kcal.
 
@@ -158,8 +159,10 @@ Handled in logic, with no warning text (owner rule):
 - **Pregnant**: needs rise by about 85, 285 and 475 kcal/day in the three trimesters [FAO 2004, chapter 6]. No target.
 - **Breastfeeding**: needs rise by about 505 kcal/day for the first six months [FAO 2004, chapter 7]. No target.
 - **BMI under 18.5** (underweight [WHO NLiS]): no deficit; the "lose" goal gets maintenance and an "underweight" insight.
-- **Invalid input** (height outside 100 to 250 cm, weight outside 25 to 350 kg, body fat outside 3% to 70%, unknown sex or activity, malformed date): no target.
-- **Floor and rate**: no deficit target below the floor; a planned loss never above 1%/week and a planned gain never above 0.5%/week, after rounding (deficits round up, surpluses down).
+- **Invalid input** (height outside 100 to 250 cm, weight outside 25 to 350 kg, a BMI outside 12 to 100 (a plausibility bound for typing errors, not a clinical cut-off), body fat outside 3% to 70%, unknown sex or activity, malformed date): no target.
+- **Floor and rate**: no deficit target below the floor; a planned loss never above 1%/week or 1,000 kcal/day and a planned gain never above 0.5%/week, after rounding (deficits round up, surpluses down).
+
+The app shows a "Targets off" card naming the reason (under 18, pregnancy, breastfeeding, or details to check) and uses the person's manual targets.
 
 Not covered, because the app has no input for them: eating disorders, kidney disease (PROT-AGE notes that severe kidney disease can require less protein [Bauer 2013]), medicines that change appetite or weight, and conditions that change resting expenditure. These are open risks.
 
@@ -177,6 +180,7 @@ Insights are data; the UI words them. Each has `id`, `severity` (high, medium, l
 | rate-too-fast | ratePctPerWeek, maxPctPerWeek, days | raise-intake (kcal) |
 | gain-too-fast | ratePctPerWeek, maxPctPerWeek, days | reduce-intake (kcal) |
 | adaptation | expectedKcal, observedKcal, gapKcal, gapPct, lossPct, weeks | diet-break (weeks, kcal); also resistance-train, add-steps |
+| partial-log | meanIntakeKcal, restingKcal, loggedDays | log-consistently (days) |
 | plateau | days, ratePctPerWeek, meanIntakeKcal, previousMeanIntakeKcal (cause: logging-gaps, intake-rise, adaptation, unexplained) | log-consistently, return-to-target, diet-break, reduce-intake or add-steps |
 | diet-break | lossPct, weeksLosing (trigger: milestone, duration) | diet-break (weeks, kcal) |
 | protein-low | averageG, targetG, days | raise-protein (grams, targetGrams) |

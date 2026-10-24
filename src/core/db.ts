@@ -55,10 +55,12 @@ export const putWeighIn = (w: WeighIn): Promise<IDBValidKey> => tx('readwrite', 
 export const deleteWeighIn = (at: number): Promise<undefined> => tx('readwrite', s => s.delete(at), WEIGHINS);
 export const clearWeighIns = (): Promise<undefined> => tx('readwrite', s => s.clear(), WEIGHINS);
 
-/** Removes everything Nuance stores on this device (meals, profile, keys, usage, lookups, offline
- * copy), then reloads into a fresh app. */
+/** Removes everything Nuance stores on this device (meals, weigh-ins, profile with body details, key,
+ * usage, offline copy), then reloads into a fresh app. Each store is cleared on its own, so one failure
+ * does not leave the others behind. */
 export async function eraseAll(): Promise<void> {
-  try { await clearMeals(); await clearWeighIns(); } catch { /* database blocked */ }
+  try { await clearMeals(); } catch { /* database blocked */ }
+  try { await clearWeighIns(); } catch { /* database blocked */ }
   try { for (const k of Object.keys(localStorage)) if (k.startsWith('nuance.')) localStorage.removeItem(k); } catch { /* storage blocked */ }
   try { for (const k of await caches.keys()) if (k.startsWith('nuance-')) await caches.delete(k); } catch { /* no Cache Storage */ }
   location.reload();

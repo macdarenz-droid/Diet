@@ -54,8 +54,15 @@ export function paceFor(p: Pick<Profile, 'goal' | 'pace'>): number | undefined {
   return p.goal === 'lose' || p.goal === 'muscle' ? PACE[p.goal][p.pace] : undefined;
 }
 
+/** Birth years the form accepts: up to 110 years back (the engine stops at 120). */
+export function birthYears(now = Date.now()): { min: number; max: number } {
+  const y = new Date(now).getFullYear();
+  return { min: y - 110, max: y };
+}
+
 export function complete(b: Partial<Body> | undefined): b is Body {
-  return !!b && !!b.birthYear && b.birthYear > 1900 && !!b.heightCm && b.heightCm >= 100 && b.heightCm <= 250 && !!b.sex && !!b.activity;
+  const years = birthYears();
+  return !!b && !!b.birthYear && b.birthYear >= years.min && b.birthYear <= years.max && !!b.heightCm && b.heightCm >= 100 && b.heightCm <= 250 && !!b.sex && !!b.activity;
 }
 
 /** A logged day under this is taken as unfinished: diets below 800 kcal a day need medical supervision

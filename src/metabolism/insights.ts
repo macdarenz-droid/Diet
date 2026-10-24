@@ -14,7 +14,7 @@ const SEVERITY: Record<Severity, number> = { high: 0, medium: 1, low: 2 };
 
 /** Tie-break order within a severity: safety first, then what changes the plan, then feedback. */
 export const KIND_ORDER: readonly InsightKind[] = [
-  'excluded', 'underweight', 'intake-below-floor', 'rate-too-fast', 'gain-too-fast', 'adaptation', 'plateau',
+  'excluded', 'underweight', 'intake-below-floor', 'rate-too-fast', 'gain-too-fast', 'adaptation', 'partial-log', 'plateau',
   'diet-break', 'protein-low', 'expenditure-update', 'rate-too-slow', 'drift', 'need-data', 'trend-on-track',
 ];
 
@@ -58,13 +58,15 @@ export function assess(input: AssessInput): Assessment {
   const last14 = intakesIn(input.intakes, today - 13, today).map(([, d]) => d);
   const mean14 = last14.length ? last14.reduce((s, d) => s + d.kcal, 0) / last14.length : 0;
   const floor = FLOOR_KCAL[profile.sex];
+  // The latest window says the log is missing meals: its intake is not what was eaten.
+  const partial = expenditure.observed !== null && !expenditure.observed.plausible ? expenditure.observed : null;
 
   if (goal === 'lose' && targets.limits.includes('underweight')) {
     out.push({ id: 'underweight', severity: 'high', numbers: { bmi: r1(bmiNow) }, action: { kind: 'no-deficit', kcal }, also: [] });
   }
 
   // Below the floor and below the target (a person whose maintenance is under the floor is not flagged for eating it).
-  if (last14.length >= 7 && mean14 < floor && mean14 < kcal) {
+  if (!partial && last14.length >= 7 && mean14 < floor && mean14 < kcal) {
     out.push({ id: 'intake-below-floor', severity: 'high', numbers: { meanIntakeKcal: Math.round(mean14), floorKcal: floor, days: last14.length }, action: { kind: 'raise-intake', kcal }, also: [] });
   }
 
@@ -100,6 +102,10 @@ export function assess(input: AssessInput): Assessment {
       action: goal === 'lose' ? { kind: 'diet-break', weeks: DIET_BREAK_WEEKS, kcal: maintenance } : { kind: 'update-target', kcal },
       also: [train, walk],
     });
+  }
+
+  if (partial) {
+    out.push({ id: 'partial-log', severity: 'medium', numbers: { meanIntakeKcal: Math.round(partial.meanIntakeKcal), restingKcal: Math.round(partial.restingKcal), loggedDays: partial.loggedDays }, action: { kind: 'log-consistently', days: WINDOW_DAYS }, also: [] });
   }
 
   if (plateau) {
@@ -163,7 +169,7 @@ export function assess(input: AssessInput): Assessment {
     }
   }
 
-  if (expenditure.confidence === 'none' || expenditure.confidence === 'low') {
+  if (!partial && (expenditure.confidence === 'none' || expenditure.confidence === 'low')) {
     const from = today - WINDOW_DAYS + 1;
     const logged = intakesIn(input.intakes, from, today).length;
     const weighed = input.weighIns.filter(w => w.kg > 0 && Number.isFinite(w.at) && Math.floor(weighInDays(w.at)) >= from && Math.floor(weighInDays(w.at)) <= today).length;

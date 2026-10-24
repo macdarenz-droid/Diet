@@ -14,7 +14,7 @@ import { tap } from '@/ui/haptics';
 import { Sheet } from '@/ui/Sheet';
 import { toast } from '@/app/toast';
 import { meals } from '@/slices/today/meals';
-import { PACE, activeTargets, assessment, logWeight, weighIns } from '@/slices/body/body';
+import { PACE, activeTargets, assessment, birthYears, logWeight, weighIns } from '@/slices/body/body';
 import { KG_MAX, KG_MIN } from '@/slices/body/WeightSheet';
 import { wordPace } from '@/slices/body/words';
 import { KeySheet, keySheet, maskKey } from './KeySheet';
@@ -118,13 +118,13 @@ function ValueRow({ label, value }: { label: string; value: string }) {
 function BodySection({ i }: { i: number }) {
   const b = profile.value.body ?? {};
   const last = weighIns.value.at(-1);
-  const year = new Date().getFullYear();
+  const years = birthYears();
   return (
     <Section title="Body" i={i}>
       <div class="stack">
         <Segmented<Sex> label="Sex" value={b.sex ?? ('' as Sex)} options={[{ value: 'female', label: 'Female' }, { value: 'male', label: 'Male' }]} onChange={sex => setBody(sex === 'male' ? { sex, pregnant: false, breastfeeding: false } : { sex })} />
         <div class="list">
-          <NumRow label="Birth year" value={b.birthYear} min={1900} max={year} onChange={birthYear => setBody({ birthYear })} />
+          <NumRow label="Birth year" value={b.birthYear} min={years.min} max={years.max} onChange={birthYear => setBody({ birthYear })} />
           <NumRow label="Height" unit="cm" value={b.heightCm} min={100} max={250} onChange={heightCm => setBody({ heightCm })} />
           <NumRow label="Weight" unit="kg" decimal value={last?.kg} min={KG_MIN} max={KG_MAX} onChange={kg => { if (kg !== undefined) void logWeight(kg).then(ok => { if (!ok) toast('Not saved on this device'); }); }} />
           <NumRow label="Body fat" unit="%" optional value={b.bodyFatPct} min={3} max={70} onChange={bodyFatPct => setBody({ bodyFatPct })} />
@@ -202,7 +202,7 @@ function FoodDataSheet({ onClose }: { onClose: () => void }) {
     <Sheet title="Food data" onClose={onClose}>
       <div class="stack food-data">
         <p>Contains data from the <a href="https://www.foodstandards.gov.au/science-data/food-nutrient-databases/afcd" target="_blank" rel="noopener noreferrer">Australian Food Composition Database, Release 3</a>, Food Standards Australia New Zealand, used under its <a href="https://www.foodstandards.gov.au/science-data/monitoringnutrients/afcd/datauserlicenceagreement" target="_blank" rel="noopener noreferrer">data user licence</a>. Nutrients are selected, converted to kcal and rounded. FSANZ does not endorse Nuance.</p>
-        <p>Contains public sector information licensed under the <a href="https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/" target="_blank" rel="noopener noreferrer">Open Government Licence v3.0</a>: McCance and Widdowson's Composition of Foods Integrated Dataset 2021.</p>
+        <p>Contains public sector information licensed under the <a href="https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/" target="_blank" rel="noopener noreferrer">Open Government Licence v3.0</a>: McCance and Widdowson's Composition of Foods Integrated Dataset 2021, Public Health England.</p>
       </div>
     </Sheet>
   );

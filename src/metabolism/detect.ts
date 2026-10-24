@@ -77,7 +77,7 @@ export function detectAdaptation(i: DetectInput): Adaptation | null {
   if (cFrom <= bTo) return null;
   const base = observedExpenditure({ ...i, fromDay: bFrom, toDay: bTo });
   const cur = observedExpenditure({ ...i, fromDay: cFrom, toDay: cTo });
-  if (!base || !cur || !base.steady || !cur.steady) return null;
+  if (!base || !cur || !base.steady || !cur.steady || !base.plausible || !cur.plausible) return null;
   const ratio = restingExpenditure(i.profile, i.age, cur.midKg).kcal / restingExpenditure(i.profile, i.age, base.midKg).kcal;
   const expectedKcal = base.kcal * ratio;
   const gapKcal = expectedKcal - cur.kcal;

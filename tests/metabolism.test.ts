@@ -3,7 +3,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   assess, compositionAt, cunningham, dailyTargets, dayNumber, detectAdaptation, deurenbergFatPct, energyDensity, estimateExpenditure,
-  mifflinStJeor, observedExpenditure, rankInsights, referenceComposition, restingExpenditure, restingMethod, totalExpenditure, trendFit,
+  mifflinStJeor, observedExpenditure, rankInsights, referenceComposition, restingExpenditure, restingMethod, screen, totalExpenditure, trendFit,
   trendWeights,
 } from '@/metabolism';
 import type { ActivityLevel, BodyProfile, DayIntake, Goal, Insight, Sex, WeighIn } from '@/metabolism';
@@ -12,6 +12,7 @@ import { RULE_OF_THUMB_KCAL_PER_KG } from '@/metabolism/constants';
 // The documented limits (docs/METABOLISM.md, section 9), written out so a changed constant fails here.
 const MAX_LOSS = 1.0;
 const MAX_GAIN = 0.5;
+const MAX_DEFICIT = 1000;
 const FLOOR: Record<Sex, number> = { female: 1200, male: 1500 };
 
 // ---- Synthetic data -------------------------------------------------------------------------------
@@ -255,11 +256,28 @@ describe('daily targets', () => {
     // Protein: 2.3 g x 70 kg lean = 161 g.
     expect(t.proteinG).toBe(161);
   });
-  it('caps the rate at 1%/week: 2900 - 1068 = 1832, rounded up to 1840', () => {
+  it('caps the rate at 1%/week, then the deficit at 1000 kcal: 1% would be 2900 - 1068 = 1832; 2900 - 1000 = 1900', () => {
     const t = dailyTargets({ profile: fat30, goal: 'lose', today, maintenanceKcal: 2900, ratePctPerWeek: 2 });
-    expect(t.kcal).toBe(1840);
-    expect(t.limits).toContain('max-rate');
+    expect(t.kcal).toBe(1900);
+    expect(t.limits).toEqual(['max-rate', 'max-deficit']);
     expect(t.ratePctPerWeek).toBeGreaterThanOrEqual(-MAX_LOSS);
+  });
+  it('caps the rate at 1%/week when that deficit is under 1000 kcal: 70 kg at 30% fat', () => {
+    const t = dailyTargets({ profile: { ...fat30, weightKg: 70 }, goal: 'lose', today, maintenanceKcal: 2400, ratePctPerWeek: 2 });
+    expect(t.limits).toEqual(['max-rate']);
+    expect(t.ratePctPerWeek).toBeCloseTo(-MAX_LOSS, 1);
+    expect(t.kcal! - 2400).toBeGreaterThan(-MAX_DEFICIT);
+  });
+  it('never plans a deficit over 1000 kcal a day, however large the body: 175 cm, 200 kg', () => {
+    const big: BodyProfile = { sex: 'male', age: 40, heightCm: 175, weightKg: 200, activity: 'light' };
+    const t = dailyTargets({ profile: big, goal: 'lose', today, ratePctPerWeek: 1 });
+    expect(t.maintenanceKcal! - t.kcal!).toBeLessThanOrEqual(MAX_DEFICIT);
+    expect(t.limits).toContain('max-deficit');
+  });
+  it('treats a BMI outside 12 to 100 as a typing error', () => {
+    expect(screen({ sex: 'male', age: 40, heightCm: 100, weightKg: 350, activity: 'vigorous' }, 40)).toBe('invalid');
+    expect(screen({ sex: 'female', age: 40, heightCm: 250, weightKg: 25, activity: 'light' }, 40)).toBe('invalid');
+    expect(screen({ sex: 'male', age: 40, heightCm: 175, weightKg: 200, activity: 'light' }, 40)).toBeNull();
   });
   it('holds the floor: woman 60 kg at 1%/week would need 1500 - 570 = 930 kcal; the target stays at 1200', () => {
     const woman: BodyProfile = { sex: 'female', age: 30, heightCm: 165, weightKg: 60, bodyFatPct: 30, activity: 'light' };
@@ -366,6 +384,39 @@ describe('safety', () => {
     expect(hit).toBeDefined();
     expect(hit!.numbers.ratePctPerWeek).toBeLessThan(-1);
     expect(hit!.action.kind === 'raise-intake' && hit!.action.kcal).toBeGreaterThan(1300);
+  });
+});
+
+// ---- A log missing meals ----------------------------------------------------------------------------
+
+describe('a log missing meals', () => {
+  // A woman of 30, 165 cm, 70 kg, eats 2,050 kcal a day at a stable weight but logs only 45% of it (about
+  // 920 kcal). Read at face value her maintenance would be about 920, under her resting 1,450.
+  const woman: BodyProfile = { sex: 'female', age: 30, heightCm: 165, weightKg: 70, activity: 'light' };
+  const s = simulate(woman, { days: 70, seed: 7, intake: () => 2050, tdee: () => 2050, noiseKcal: 150 });
+  const logged = s.intakes.map(d => ({ ...d, kcal: d.kcal * 0.45 }));
+
+  it('sets the window aside instead of lowering maintenance', () => {
+    const e = estimateExpenditure({ profile: woman, age: 30, weighIns: s.weighIns, intakes: logged, today: s.todayN });
+    expect(e.observed?.plausible).toBe(false);
+    expect(e.kcal).toBe(e.priorKcal);
+    expect(e.confidence).toBe('none');
+  });
+
+  it('says meals are missing instead of telling her to eat more', () => {
+    const a = assess({ profile: woman, goal: 'lose', today: s.today, weighIns: s.weighIns, intakes: logged });
+    const kinds = ids(a.insights);
+    expect(kinds).toContain('partial-log');
+    expect(kinds).not.toContain('intake-below-floor');
+    expect(kinds).not.toContain('need-data');
+    expect(a.targets.kcal).toBeGreaterThanOrEqual(FLOOR.female);
+    expect(a.targets.maintenanceKcal).toBeGreaterThan(1900);
+  });
+
+  it('keeps the full log usable', () => {
+    const a = assess({ profile: woman, goal: 'lose', today: s.today, weighIns: s.weighIns, intakes: s.intakes });
+    expect(ids(a.insights)).not.toContain('partial-log');
+    expect(a.expenditure!.observed!.plausible).toBe(true);
   });
 });
 
