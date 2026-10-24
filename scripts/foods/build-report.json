@@ -1,0 +1,62 @@
+{
+  "counts": {
+    "Foundation": {
+      "records in source": 363,
+      "skipped: no fibre value to subtract": 94,
+      "no fibre value, carbohydrate by difference kept (at most 1 g of fibre possible)": 69,
+      "skipped: no protein, fat or carbohydrate": 42,
+      "available carbohydrate below 0 set to 0": 10,
+      "kept": 227
+    },
+    "SR Legacy": {
+      "records in source": 7793,
+      "skipped: no fibre value to subtract": 398,
+      "no fibre value, carbohydrate by difference kept (at most 1 g of fibre possible)": 164,
+      "dropped: Foundation food with the same NDB number reports every value": 23,
+      "kept": 7372
+    },
+    "Survey (FNDDS)": {
+      "records in source": 5432,
+      "skipped: no protein, fat or carbohydrate": 1,
+      "dropped: same name and values as an earlier food": 68,
+      "kept": 5363
+    },
+    "AFCD": {
+      "records in source": 1588,
+      "kept": 1588
+    },
+    "CoFID": {
+      "records in source": 2887,
+      "skipped: no protein, fat or carbohydrate": 34,
+      "skipped: weighed with inedible parts": 198,
+      "skipped: alcoholic drink given per 100 ml": 31,
+      "food code used twice in the source, kept with a suffix": 1,
+      "kept": 2624
+    }
+  },
+  "files": [
+    {
+      "name": "foods-usda.b991c20367.json",
+      "raw": 1430173,
+      "gzip": 382129,
+      "count": 12962
+    },
+    {
+      "name": "foods-afcd.62e028cc86.json",
+      "raw": 135689,
+      "gzip": 40163,
+      "count": 1588
+    },
+    {
+      "name": "foods-cofid.657e1056d3.json",
+      "raw": 207766,
+      "gzip": 64824,
+      "count": 2624
+    }
+  ],
+  "total": {
+    "foods": 17174,
+    "raw": 1773628,
+    "gzip": 487116
+  }
+}
