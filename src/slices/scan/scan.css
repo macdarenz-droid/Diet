@@ -1,0 +1,58 @@
+/* Scan sheet */
+.scan-sheet { padding-bottom: 4px; }
+.option { display: flex; align-items: center; gap: 14px; width: 100%; padding: 14px; text-align: left; color: inherit; }
+.option-icon { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 11px; background: var(--surface-2); border: 1px solid var(--line); color: var(--ink); flex: none; transition: transform var(--d-sheet) var(--e-spring); }
+.option-icon svg { width: 20px; height: 20px; }
+@media (hover: hover) and (pointer: fine) { .option:hover .option-icon { transform: scale(1.06) rotate(-3deg); } }
+.option-title { display: block; font-weight: 600; font-size: 15px; letter-spacing: -0.015em; }
+.option-meta { display: block; font-size: 12.5px; color: var(--ink-2); margin-top: 1px; }
+.option .chev { width: 16px; height: 16px; color: var(--ink-3); transition: transform var(--d-base) var(--e-standard); }
+@media (hover: hover) and (pointer: fine) { .option:hover .chev { transform: translateX(2px); color: var(--ink-2); } }
+.preview { width: 100%; max-height: 46dvh; object-fit: cover; border-radius: 14px; border: 1px solid var(--line); }
+
+/* Analysing */
+.topbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; min-height: 38px; }
+.scan-frame { position: relative; border-radius: 20px; overflow: hidden; border: 1px solid var(--line-strong); aspect-ratio: 4 / 3; background: var(--surface-2); }
+.scan-frame img { width: 100%; height: 100%; object-fit: cover; }
+.scan-frame::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, transparent 55%, rgb(0 0 0 / .35)); pointer-events: none; }
+.scan-frame .beam {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 38%;
+  background: linear-gradient(180deg, transparent, rgb(255 255 255 / .16) 85%, rgb(255 255 255 / .55) 99%, transparent);
+  mix-blend-mode: plus-lighter;
+  animation: beam 2.2s var(--e-standard) infinite;
+  pointer-events: none;
+}
+@keyframes beam { 0% { transform: translateY(-100%); } 100% { transform: translateY(265%); } }
+.scan-frame.stopped .beam { display: none; }
+[data-motion="reduce"] .scan-frame .beam { animation: none; opacity: .4; transform: translateY(80%); }
+.corners i { position: absolute; width: 22px; height: 22px; border: 2px solid rgb(255 255 255 / .85); z-index: 1; animation: corner 1.8s var(--e-standard) infinite alternate; }
+.corners i:nth-child(1) { top: 12px; left: 12px; border-right: 0; border-bottom: 0; border-radius: 8px 0 0 0; }
+.corners i:nth-child(2) { top: 12px; right: 12px; border-left: 0; border-bottom: 0; border-radius: 0 8px 0 0; }
+.corners i:nth-child(3) { bottom: 12px; left: 12px; border-right: 0; border-top: 0; border-radius: 0 0 0 8px; }
+.corners i:nth-child(4) { bottom: 12px; right: 12px; border-left: 0; border-top: 0; border-radius: 0 0 8px 0; }
+@keyframes corner { to { opacity: .45; } }
+[data-motion="reduce"] .corners i { animation: none; }
+
+.hero-text { display: flex; gap: 12px; align-items: flex-start; padding: 16px; font-size: 15px; line-height: 1.5; }
+.hero-text svg { width: 18px; height: 18px; color: var(--ink-3); flex: none; margin-top: 3px; }
+
+.steps { list-style: none; margin: 22px 0 0; padding: 0; display: grid; gap: 4px; }
+.step { display: flex; align-items: center; gap: 12px; height: 40px; padding: 0 4px; font-size: 14.5px; font-weight: 500; color: var(--ink-3); transition: color var(--d-base) var(--e-standard); }
+.step.done { color: var(--ink-2); }
+.step.now { color: var(--ink); }
+.step-mark { display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; border: 1px solid var(--line-strong); flex: none; transition: background-color var(--d-base), border-color var(--d-base); }
+.step.done .step-mark { background: var(--ink); border-color: var(--ink); color: var(--on-ink); }
+.step.done .step-mark svg { width: 13px; height: 13px; stroke-width: 2.2; stroke-dasharray: 24; animation: draw 360ms var(--e-enter) both; }
+@keyframes draw { from { stroke-dashoffset: 24; } to { stroke-dashoffset: 0; } }
+.step-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--ink-3); }
+.step.now .step-mark { border-color: var(--ink); }
+.step.now .step-dot { background: var(--ink); animation: pulse 1.1s var(--e-standard) infinite alternate; }
+@keyframes pulse { from { transform: scale(.7); opacity: .6; } to { transform: scale(1.25); opacity: 1; } }
+[data-motion="reduce"] .step.now .step-dot { animation: none; }
+
+.fail { margin-top: 18px; display: grid; gap: 14px; }
+.fail-title { font-size: 15px; font-weight: 550; }

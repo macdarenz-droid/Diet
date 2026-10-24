@@ -1,0 +1,170 @@
+{
+ "_source": "GET https://api.nal.usda.gov/fdc/v1/foods/search?query=fried rice&pageSize=3&dataType=Foundation,SR Legacy,Survey (FNDDS), 2026-10-24; nutrients trimmed to the ids the app reads",
+ "foods": [
+  {
+   "fdcId": 2708951,
+   "description": "Rice, fried, meatless",
+   "dataType": "Survey (FNDDS)",
+   "foodNutrients": [
+    {
+     "nutrientId": 1003,
+     "nutrientName": "Protein",
+     "value": 3.84,
+     "unitName": "G"
+    },
+    {
+     "nutrientId": 1004,
+     "nutrientName": "Total lipid (fat)",
+     "value": 3.19,
+     "unitName": "G"
+    },
+    {
+     "nutrientId": 1005,
+     "nutrientName": "Carbohydrate, by difference",
+     "value": 32.5,
+     "unitName": "G"
+    },
+    {
+     "nutrientId": 1008,
+     "nutrientName": "Energy",
+     "value": 174,
+     "unitName": "KCAL"
+    },
+    {
+     "nutrientId": 2000,
+     "nutrientName": "Total Sugars",
+     "value": 0.62,
+     "unitName": "G"
+    },
+    {
+     "nutrientId": 1079,
+     "nutrientName": "Fiber, total dietary",
+     "value": 1.1,
+     "unitName": "G"
+    },
+    {
+     "nutrientId": 1093,
+     "nutrientName": "Sodium, Na",
+     "value": 361,
+     "unitName": "MG"
+    },
+    {
+     "nutrientId": 1258,
+     "nutrientName": "Fatty acids, total saturated",
+     "value": 0.493,
+     "unitName": "G"
+    }
+   ]
+  },
+  {
+   "fdcId": 2708952,
+   "description": "Rice, fried, NFS",
+   "dataType": "Survey (FNDDS)",
+   "foodNutrients": [
+    {
+     "nutrientId": 1003,
+     "nutrientName": "Protein",
+     "value": 3.84,
+     "unitName": "G"
+    },
+    {
+     "nutrientId": 1004,
+     "nutrientName": "Total lipid (fat)",
+     "value": 3.19,
+     "unitName": "G"
+    },
+    {
+     "nutrientId": 1005,
+     "nutrientName": "Carbohydrate, by difference",
+     "value": 32.5,
+     "unitName": "G"
+    },
+    {
+     "nutrientId": 1008,
+     "nutrientName": "Energy",
+     "value": 174,
+     "unitName": "KCAL"
+    },
+    {
+     "nutrientId": 2000,
+     "nutrientName": "Total Sugars",
+     "value": 0.62,
+     "unitName": "G"
+    },
+    {
+     "nutrientId": 1079,
+     "nutrientName": "Fiber, total dietary",
+     "value": 1.1,
+     "unitName": "G"
+    },
+    {
+     "nutrientId": 1093,
+     "nutrientName": "Sodium, Na",
+     "value": 361,
+     "unitName": "MG"
+    },
+    {
+     "nutrientId": 1258,
+     "nutrientName": "Fatty acids, total saturated",
+     "value": 0.493,
+     "unitName": "G"
+    }
+   ]
+  },
+  {
+   "fdcId": 2708955,
+   "description": "Rice, fried, with beef",
+   "dataType": "Survey (FNDDS)",
+   "foodNutrients": [
+    {
+     "nutrientId": 1003,
+     "nutrientName": "Protein",
+     "value": 7.86,
+     "unitName": "G"
+    },
+    {
+     "nutrientId": 1004,
+     "nutrientName": "Total lipid (fat)",
+     "value": 4.06,
+     "unitName": "G"
+    },
+    {
+     "nutrientId": 1005,
+     "nutrientName": "Carbohydrate, by difference",
+     "value": 27.62,
+     "unitName": "G"
+    },
+    {
+     "nutrientId": 1008,
+     "nutrientName": "Energy",
+     "value": 178,
+     "unitName": "KCAL"
+    },
+    {
+     "nutrientId": 2000,
+     "nutrientName": "Total Sugars",
+     "value": 0.53,
+     "unitName": "G"
+    },
+    {
+     "nutrientId": 1079,
+     "nutrientName": "Fiber, total dietary",
+     "value": 0.9,
+     "unitName": "G"
+    },
+    {
+     "nutrientId": 1093,
+     "nutrientName": "Sodium, Na",
+     "value": 313,
+     "unitName": "MG"
+    },
+    {
+     "nutrientId": 1258,
+     "nutrientName": "Fatty acids, total saturated",
+     "value": 0.931,
+     "unitName": "G"
+    }
+   ]
+  }
+ ]
+}
