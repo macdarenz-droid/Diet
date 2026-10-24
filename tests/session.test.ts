@@ -60,6 +60,7 @@ import { answer, applyEdits, current, removeItem, scaleItems, start } from '@/sl
 import { AnalysisError } from '@/ai/errors';
 import { usage } from '@/core/store';
 import type { AnalyzeInput } from '@/ai/analyze';
+import { FOOD_FILES, resetFoods } from '@/nutrition/foods';
 
 const calls: AnalyzeInput[] = [];
 let next: () => Promise<unknown> = async () => { throw new Error('no mock'); };
@@ -146,6 +147,18 @@ describe('start', () => {
     next = () => new Promise(() => {});
     start({ text: 'toast' });
     expect(scan.value).toMatchObject({ phase: 'running', edits: { grams: {}, removed: [] }, baseKcal: 0 });
+  });
+
+  it('loads the food tables while Claude is still answering', async () => {
+    resetFoods();
+    const fetchMock = vi.fn(async (_path: string) => new Response('', { status: 503 }));
+    vi.stubGlobal('fetch', fetchMock);
+    next = () => new Promise(() => {});
+    start({ text: 'toast' });
+    await flush();
+    expect(fetchMock.mock.calls.map(c => String(c[0])).sort()).toEqual([...FOOD_FILES].sort());
+    vi.unstubAllGlobals();
+    resetFoods();
   });
 });
 
