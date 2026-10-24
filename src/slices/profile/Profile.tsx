@@ -5,7 +5,8 @@ import type { Diet, Goal, Profile as P, Targets } from '@/core/models';
 import { costUsd, keys, prefs, profile, usage } from '@/core/store';
 import { monthKey } from '@/core/dates';
 import { energy, fmt, fromEnergy } from '@/core/units';
-import { clearMeals } from '@/core/db';
+import { clearMeals, eraseAll } from '@/core/db';
+import { clearLookupCache } from '@/nutrition/lookup';
 import { PRICE } from '@/ai/config';
 import { Button, Choices, Section, Segmented, Switch } from '@/ui/primitives';
 import { Chevron, Key, Trash } from '@/ui/icons';
@@ -63,10 +64,21 @@ function ClearSheet({ onClose }: { onClose: () => void }) {
     <Sheet title="Clear food log" onClose={onClose}>
       {close => (
         <div class="stack">
-          <p class="muted clear-copy">Deletes every logged meal on this device.</p>
-          <Button variant="danger" block onClick={async () => { await clearMeals(); meals.value = []; close(); toast('Food log cleared'); }}><Trash />Delete all meals</Button>
+          <p class="muted clear-copy">Deletes every logged meal and every saved food lookup on this device.</p>
+          <Button variant="danger" block onClick={async () => { await clearMeals(); clearLookupCache(); meals.value = []; close(); toast('Food log cleared'); }}><Trash />Delete all meals</Button>
         </div>
       )}
+    </Sheet>
+  );
+}
+
+function EraseSheet({ onClose }: { onClose: () => void }) {
+  return (
+    <Sheet title="Erase all data" onClose={onClose}>
+      <div class="stack">
+        <p class="muted clear-copy">Deletes meals, profile, keys, usage and saved lookups from this device, then restarts the app.</p>
+        <Button variant="danger" block onClick={() => { void eraseAll(); }}><Trash />Erase everything</Button>
+      </div>
     </Sheet>
   );
 }
@@ -76,6 +88,7 @@ export function Profile() {
   const k = keys.value;
   const month = usage.value.find(m => m.month === monthKey(Date.now()));
   const [clearing, setClearing] = useState(false);
+  const [erasing, setErasing] = useState(false);
   const osReduce = osReducedMotion();
 
   return (
@@ -149,13 +162,17 @@ export function Profile() {
       </Section>
 
       <Section title="Data" i={10}>
-        <Button variant="secondary" block onClick={() => setClearing(true)}><Trash />Clear food log</Button>
+        <div class="stack">
+          <Button variant="secondary" block onClick={() => setClearing(true)}><Trash />Clear food log</Button>
+          <Button variant="ghost" block onClick={() => setErasing(true)}>Erase all data</Button>
+        </div>
       </Section>
 
       <p class="mono version" style={{ '--i': 11 } as JSX.CSSProperties}>Nuance {__APP_VERSION__}</p>
 
       {keySheet.value && <KeySheet which={keySheet.value} onClose={() => { keySheet.value = null; }} />}
       {clearing && <ClearSheet onClose={() => setClearing(false)} />}
+      {erasing && <EraseSheet onClose={() => setErasing(false)} />}
     </div>
   );
 }

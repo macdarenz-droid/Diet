@@ -72,7 +72,7 @@ export function Analysing() {
       )}
 
       {failed ? (
-        <Card class="fail rise" style={{ '--i': 1 } as JSX.CSSProperties}>
+        <Card class="fail rise" role="alert" style={{ '--i': 1 } as JSX.CSSProperties}>
           <div class="fail-title">{failText(s.error?.kind ?? 'unknown')}</div>
           <div class="row fail-actions">
             {s.error?.kind === 'auth' || s.error?.kind === 'denied'
@@ -82,17 +82,20 @@ export function Analysing() {
           </div>
         </Card>
       ) : (
-        <ol class="steps" aria-live="polite">
+        <>
+        <p class="visually-hidden" role="status">{(s.photo ? STEPS[at]?.photo : STEPS[at]?.text) ?? ''}</p>
+        <ol class="steps">
           {STEPS.map((x, i) => {
             const state = i < at ? 'done' : i === at ? 'now' : 'next';
             return (
-              <li key={x.id} class={`step ${state} rise`} style={{ '--i': i + 1 } as JSX.CSSProperties}>
+              <li key={x.id} class={`step ${state} rise`} aria-current={state === 'now' ? 'step' : undefined} style={{ '--i': i + 1 } as JSX.CSSProperties}>
                 <span class="step-mark">{state === 'done' ? <Check /> : <span class="step-dot" />}</span>
                 <span>{s.photo ? x.photo : x.text}</span>
               </li>
             );
           })}
         </ol>
+        </>
       )}
       {keySheet.value && <KeySheet which={keySheet.value} onClose={() => { keySheet.value = null; }} onSaved={retry} />}
     </div>

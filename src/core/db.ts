@@ -35,3 +35,12 @@ export const allMeals = (): Promise<Meal[]> => tx('readonly', s => s.getAll() as
 export const putMeal = (m: Meal): Promise<IDBValidKey> => tx('readwrite', s => s.put(m));
 export const deleteMeal = (id: string): Promise<undefined> => tx('readwrite', s => s.delete(id));
 export const clearMeals = (): Promise<undefined> => tx('readwrite', s => s.clear());
+
+/** Removes everything Nuance stores on this device (meals, profile, keys, usage, lookups, offline
+ * copy), then reloads into a fresh app. */
+export async function eraseAll(): Promise<void> {
+  try { await clearMeals(); } catch { /* database blocked */ }
+  try { for (const k of Object.keys(localStorage)) if (k.startsWith('nuance.')) localStorage.removeItem(k); } catch { /* storage blocked */ }
+  try { for (const k of await caches.keys()) if (k.startsWith('nuance-')) await caches.delete(k); } catch { /* no Cache Storage */ }
+  location.reload();
+}

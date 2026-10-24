@@ -154,3 +154,44 @@ describe('cache and status', () => {
     }
   });
 });
+
+// Red team (security) on dcfa404: lookups a photo can trigger, and what stays on the device.
+import { CACHE_MAX, LOOKUPS_MAX, PREFIX, cleanQuery, clearLookupCache } from '@/nutrition/lookup';
+
+describe('lookup limits', () => {
+  it('cleans model-chosen search names', () => {
+    expect(cleanQuery('chicken"><img src=x onerror=1> thigh')).toBe('chicken img src x onerror 1 thigh');
+    expect(cleanQuery("Rice, Fried (with egg) — Mum's")).toBe("rice, fried (with egg) mum's");
+    expect(cleanQuery('x'.repeat(200))).toHaveLength(60);
+  });
+
+  it(`makes at most ${LOOKUPS_MAX} distinct lookups per scan, meal items first`, async () => {
+    const seen: string[] = [];
+    const many = Array.from({ length: 60 }, (_, i) => item({ name: `Food ${i}`, query: `food number ${i}` }));
+    await groundAll([[many[0]!], many.slice(1)], { key: 'K', cache: memoryCache(), search: async q => { seen.push(q); return []; } });
+    expect(seen).toHaveLength(LOOKUPS_MAX);
+    expect(seen).toContain('food number 0');
+  });
+
+  it('expires and bounds the cache, and clears it', async () => {
+    const store: Record<string, string> = {};
+    const ls = { getItem: (k: string) => store[k] ?? null, setItem: (k: string, v: string) => { store[k] = v; }, removeItem: (k: string) => { delete store[k]; } };
+    (globalThis as { localStorage?: unknown }).localStorage = new Proxy(ls, { ownKeys: () => Object.keys(store), getOwnPropertyDescriptor: (_t, k) => (k in store ? { enumerable: true, configurable: true, value: store[k as string] } : undefined) });
+    try {
+      const { localCache } = await import('@/nutrition/lookup');
+      let t = 0;
+      const cache = localCache(() => t);
+      for (let i = 0; i < CACHE_MAX + 20; i++) { t = i; cache.set(`q${i}`, []); }
+      const kept = Object.keys(store).filter(k => k.startsWith(PREFIX));
+      expect(kept).toHaveLength(CACHE_MAX);
+      expect(kept).not.toContain(`${PREFIX}q0`);
+      t = 40 * 24 * 60 * 60 * 1000;
+      expect(cache.get(`q${CACHE_MAX + 19}`)).toBeUndefined();
+      expect(store[`${PREFIX}q${CACHE_MAX + 19}`]).toBeUndefined();
+      clearLookupCache();
+      expect(Object.keys(store).filter(k => k.startsWith(PREFIX))).toHaveLength(0);
+    } finally {
+      delete (globalThis as { localStorage?: unknown }).localStorage;
+    }
+  });
+});

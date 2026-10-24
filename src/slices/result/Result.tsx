@@ -8,6 +8,8 @@ import { Back, Check, Pen, Refresh } from '@/ui/icons';
 import { confirm as hapticConfirm, tap } from '@/ui/haptics';
 import { back, go } from '@/app/router';
 import { toast } from '@/app/toast';
+import { openScan } from '@/app/scan';
+import { dur } from '@/ui/motion';
 import { logMeal } from '@/slices/today/meals';
 import { answer, current, removeItem, scan, select, setGrams, toMeal } from '@/slices/scan/session';
 import { failText } from '@/slices/scan/Analysing';
@@ -75,6 +77,9 @@ export function Result() {
         <Card class="empty rise" style={{ '--i': 1 } as JSX.CSSProperties}>
           <div class="empty-title">No food found</div>
           <div class="muted">Try a closer photo, or describe the meal.</div>
+          <div class="row empty-actions">
+            <Button variant="primary" onClick={() => { back(); setTimeout(openScan, dur('enter')); }}>Scan again</Button>
+          </div>
         </Card>
       </div>
     );

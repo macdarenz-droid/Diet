@@ -6,21 +6,25 @@ import { createHash } from 'node:crypto';
 
 const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8')) as { version: string };
 
-// The only hosts the app may contact (docs/ARCHITECTURE.md, "Network").
-export const CONNECT_HOSTS = ['https://api.anthropic.com', 'https://api.nal.usda.gov'];
+// The only hosts the app may contact (docs/ARCHITECTURE.md, "Network"); tests keep the two equal.
+export const CONNECT_HOSTS: string[] = JSON.parse(readFileSync(new URL('./network.json', import.meta.url), 'utf8')).connect;
 
-export const CSP = [
-  "default-src 'self'",
-  "script-src 'self'",
-  "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob:",
-  "font-src 'self' data:",
-  `connect-src 'self' ${CONNECT_HOSTS.join(' ')}`,
-  "manifest-src 'self'",
-  "worker-src 'self'",
-  "base-uri 'none'",
-  "form-action 'none'",
-].join('; ');
+/** The policy for one built page. Inline <style> blocks are allowed by hash, so style-src needs no
+ * 'unsafe-inline' (Preact sets style props through the CSSOM, which CSP does not restrict). */
+export function csp(styleHashes: string[]): string {
+  return [
+    "default-src 'self'",
+    "script-src 'self'",
+    `style-src 'self' ${styleHashes.map(h => `'sha256-${h}'`).join(' ')}`.trim(),
+    "img-src 'self' data: blob:",
+    "font-src 'self' data:",
+    `connect-src 'self' ${CONNECT_HOSTS.join(' ')}`,
+    "manifest-src 'self'",
+    "worker-src 'self'",
+    "base-uri 'none'",
+    "form-action 'none'",
+  ].join('; ');
+}
 
 /** Production only: the CSP meta tag (dev needs the HMR socket) and a service worker that
  * precaches this build's files under a version derived from their names. */
@@ -29,7 +33,10 @@ function pwa(): Plugin {
     name: 'nuance-pwa',
     apply: 'build',
     transformIndexHtml(html) {
-      return html.replace('<!--csp-->', `<meta http-equiv="Content-Security-Policy" content="${CSP}" />`);
+      // A missing placeholder would ship a page with no policy at all, so it fails the build.
+      if (!html.includes('<!--csp-->')) throw new Error('index.html lost its <!--csp--> placeholder');
+      const hashes = [...html.matchAll(/<style>([\s\S]*?)<\/style>/g)].map(m => createHash('sha256').update(m[1]!).digest('base64'));
+      return html.replace('<!--csp-->', `<meta http-equiv="Content-Security-Policy" content="${csp(hashes)}" />`);
     },
     generateBundle(_opts, bundle) {
       // Fonts: only the Latin subsets are precached; others load on demand if ever used.

@@ -6,6 +6,7 @@ import { Sheet } from '@/ui/Sheet';
 import { Button, useSpotlight } from '@/ui/primitives';
 import { Camera, Chevron, Image, Pen } from '@/ui/icons';
 import { tap } from '@/ui/haptics';
+import { dur } from '@/ui/motion';
 import { go } from '@/app/router';
 import { toast } from '@/app/toast';
 import { KEY_PAGES } from '@/ai/config';
@@ -58,8 +59,9 @@ export function ScanSheet({ onClose }: { onClose: () => void }) {
     if (kind === 'photo' && photo) start({ photo, note });
     else if (kind === 'text' && text.trim()) start({ text: text.trim() });
     else return;
+    // Navigate once the sheet has left, so the screen transition never captures it mid-exit.
     close();
-    go('analysing');
+    setTimeout(() => go('analysing'), dur('exit'));
   };
 
   const title = mode === 'photo' ? 'Photo' : mode === 'text' ? 'Describe' : mode === 'key' ? 'Claude key' : 'New scan';

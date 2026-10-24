@@ -41,7 +41,7 @@
   --line-strong: rgb(255 255 255 / .13);
   --ink: #f7f8f8;
   --ink-2: #8a8f98;
-  --ink-3: #5c6068;
+  --ink-3: #7a7f87;
   --on-ink: #08090a;
   --highlight: inset 0 1px 0 rgb(255 255 255 / .04);
   --glow: rgb(255 255 255 / .055);
@@ -68,7 +68,7 @@
   --line-strong: rgb(0 0 0 / .13);
   --ink: #0b0b0c;
   --ink-2: #5d5f66;
-  --ink-3: #8d9097;
+  --ink-3: #6d7077;
   --on-ink: #fbfbfa;
   --highlight: inset 0 1px 0 rgb(255 255 255 / .8);
   --glow: rgb(0 0 0 / .035);
@@ -161,10 +161,12 @@ img { display: block; max-width: 100%; }
 @keyframes slide-out-back { to { opacity: 0; transform: translateX(calc(var(--slide-x) * 0.5)); filter: blur(var(--rise-blur)); } }
 @keyframes fade-out { to { opacity: 0; } }
 
-.rise { animation: rise var(--d-enter) var(--e-enter) both; animation-delay: calc(var(--i, 0) * var(--d-stagger)); }
-.enter-forward { animation: slide-in-fwd var(--d-enter) var(--e-enter) both; }
-.enter-back { animation: slide-in-back var(--d-enter) var(--e-enter) both; }
-.enter-fade { animation: fade var(--d-enter) var(--e-standard) both; }
+/* Entrances fill backwards only: their end state is the resting state, and a held fill would
+   override later transforms and opacity (swipes, presses, fades). */
+.rise { animation: rise var(--d-enter) var(--e-enter) backwards; animation-delay: calc(var(--i, 0) * var(--d-stagger)); }
+.enter-forward { animation: slide-in-fwd var(--d-enter) var(--e-enter) backwards; }
+.enter-back { animation: slide-in-back var(--d-enter) var(--e-enter) backwards; }
+.enter-fade { animation: fade var(--d-enter) var(--e-standard) backwards; }
 
 ::view-transition-old(root), ::view-transition-new(root) { animation-duration: var(--d-enter); }
 html.vt-forward::view-transition-old(root) { animation: slide-out-fwd var(--d-exit) var(--e-exit) both; }
@@ -204,6 +206,12 @@ html.vt-fade::view-transition-new(root) { animation: fade var(--d-enter) var(--e
 .pressable { transition: transform var(--d-press) var(--e-standard); }
 .pressable:active, .pressable.pressed { transform: scale(.975); }
 [data-motion="reduce"] .pressable:active, [data-motion="reduce"] .pressable.pressed { transform: none; opacity: .85; }
+/* Reduce motion: no growth, sweeps, press scales or sheen; state still changes, instantly or by fade. */
+[data-motion="reduce"] .macrobar > span, [data-motion="reduce"] .meter .fill { animation: none; }
+[data-motion="reduce"] .ring .v { transition: none; }
+[data-motion="reduce"] :is(.btn, .icon-btn, .choice, .tab, .scan-btn, .option):active { transform: none; opacity: .85; }
+[data-motion="reduce"] .btn.primary::after { display: none; }
+[data-motion="reduce"] .seg .thumb, [data-motion="reduce"] .switch::after, [data-motion="reduce"] .dots button { transition-duration: 0ms; }
 
 .divider { height: 1px; background: var(--line); margin: 0; border: 0; }
 
@@ -231,7 +239,7 @@ html.vt-fade::view-transition-new(root) { animation: fade var(--d-enter) var(--e
 .btn:active { transform: scale(.97); }
 .btn[disabled] { opacity: .4; pointer-events: none; }
 .btn.block { width: 100%; }
-.btn.sm { --h: 34px; padding: 0 12px; font-size: 13px; border-radius: 9px; }
+.btn.sm { --h: 40px; padding: 0 14px; font-size: 13.5px; border-radius: 10px; }
 .btn.lg { --h: 52px; font-size: 15px; border-radius: 12px; }
 .btn svg { width: 18px; height: 18px; flex: none; }
 .btn.primary { background: var(--ink); color: var(--on-ink); box-shadow: 0 1px 0 rgb(255 255 255 / .12) inset, 0 8px 24px -12px color-mix(in srgb, var(--ink) 50%, transparent); }
@@ -255,9 +263,9 @@ html.vt-fade::view-transition-new(root) { animation: fade var(--d-enter) var(--e
 .icon-btn {
   display: inline-grid;
   place-items: center;
-  width: 38px;
-  height: 38px;
-  border-radius: 11px;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
   border: 1px solid var(--line);
   background: var(--surface-1);
   color: var(--ink);
@@ -294,7 +302,7 @@ html.vt-fade::view-transition-new(root) { animation: fade var(--d-enter) var(--e
 .choice {
   display: inline-flex;
   align-items: center;
-  height: 36px;
+  height: 40px;
   padding: 0 14px;
   border-radius: 10px;
   border: 1px solid var(--line);
@@ -324,11 +332,11 @@ html.vt-fade::view-transition-new(root) { animation: fade var(--d-enter) var(--e
 .seg button {
   position: relative;
   z-index: 1;
-  height: 32px;
+  height: 38px;
   border: 0;
   background: none;
   color: var(--ink-2);
-  font-size: 13px;
+  font-size: 13.5px;
   font-weight: 550;
   border-radius: 8px;
   transition: color var(--d-fast) var(--e-standard);
@@ -358,7 +366,7 @@ html.vt-fade::view-transition-new(root) { animation: fade var(--d-enter) var(--e
   color: var(--ink);
   padding: 0 12px;
   height: 44px;
-  font-size: 15px;
+  font-size: 16px; /* iOS Safari zooms the page on focus below 16px */
   box-shadow: var(--highlight);
   transition: border-color var(--d-fast), box-shadow var(--d-fast), background-color var(--d-fast);
   -webkit-appearance: none;
@@ -367,7 +375,7 @@ html.vt-fade::view-transition-new(root) { animation: fade var(--d-enter) var(--e
 .textarea { height: auto; min-height: 96px; padding: 12px; resize: none; line-height: 1.45; }
 .input::placeholder, .textarea::placeholder { color: var(--ink-3); }
 .input:focus, .textarea:focus { outline: none; border-color: var(--line-strong); box-shadow: 0 0 0 4px color-mix(in srgb, var(--ink) 7%, transparent), var(--highlight); }
-.input.mono-input { font-family: var(--mono); font-size: 13px; letter-spacing: .01em; }
+.input.mono-input { font-family: var(--mono); font-size: 16px; letter-spacing: 0; }
 .input-wrap { position: relative; }
 .input-wrap .suffix { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: var(--ink-3); font-size: 13px; pointer-events: none; }
 .input-wrap .input { padding-right: 52px; }
@@ -381,6 +389,7 @@ html.vt-fade::view-transition-new(root) { animation: fade var(--d-enter) var(--e
 /* ---------- Lists ---------- */
 .list { border-radius: var(--r-card); border: 1px solid var(--line); background: var(--surface-1); box-shadow: var(--highlight); overflow: hidden; }
 .list > * + * { border-top: 1px solid var(--line); }
+.li:focus-visible { outline-offset: -2px; }
 .li { display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 10px 14px; width: 100%; text-align: left; background: none; border: 0; color: inherit; transition: background-color var(--d-fast) var(--e-standard); }
 button.li:active { background: var(--surface-2); }
 @media (hover: hover) and (pointer: fine) { button.li:hover { background: var(--surface-2); } }
@@ -411,7 +420,10 @@ button.li:active { background: var(--surface-2); }
   view-transition-name: tabbar;
   transition: transform var(--d-sheet) var(--e-drawer), opacity var(--d-base);
 }
-.tabbar.hidden { transform: translate(-50%, calc(100% + 40px)); opacity: 0; pointer-events: none; }
+.tabbar.hidden, html[data-typing] .tabbar { transform: translate(-50%, calc(100% + 40px)); opacity: 0; pointer-events: none; }
+/* A transition name paints the bar above everything during a view transition; drop it when the bar
+   is away or a sheet is over it. */
+.tabbar.hidden, html[data-sheet] .tabbar { view-transition-name: none; }
 .tab {
   position: relative;
   display: grid;
@@ -459,10 +471,10 @@ button.li:active { background: var(--surface-2); }
   position: fixed;
   left: 0;
   right: 0;
-  bottom: 0;
+  bottom: var(--kb, 0px);
   margin: 0 auto;
   max-width: var(--max);
-  max-height: calc(100dvh - env(safe-area-inset-top) - 24px);
+  max-height: calc(100dvh - env(safe-area-inset-top) - 24px - var(--kb, 0px));
   display: flex;
   flex-direction: column;
   border-radius: var(--r-sheet) var(--r-sheet) 0 0;
@@ -497,14 +509,14 @@ button.li:active { background: var(--surface-2); }
   width: 100%;
   padding: 6px 6px 6px 14px;
   border-radius: 13px;
-  background: color-mix(in srgb, var(--surface-3) 88%, transparent);
+  background: color-mix(in srgb, var(--surface-3) 97%, transparent);
   backdrop-filter: blur(20px) saturate(1.4);
   -webkit-backdrop-filter: blur(20px) saturate(1.4);
   border: 1px solid var(--line-strong);
   box-shadow: var(--shadow-lg);
   font-size: 13.5px;
   font-weight: 500;
-  animation: rise var(--d-enter) var(--e-spring) both;
+  animation: rise var(--d-enter) var(--e-spring) backwards;
   touch-action: pan-y;
 }
 .toast .grow { padding: 6px 0; }
@@ -512,7 +524,7 @@ button.li:active { background: var(--surface-2); }
 
 /* ---------- Charts ---------- */
 .macrobar { display: flex; gap: 2px; height: 10px; border-radius: 999px; overflow: hidden; background: var(--track); }
-.macrobar > span { display: block; height: 100%; border-radius: 3px; transform-origin: left center; animation: grow-x 720ms var(--e-enter) both; animation-delay: calc(120ms + var(--i, 0) * 70ms); transition: flex-grow 500ms var(--e-standard), opacity var(--d-fast); }
+.macrobar > span { display: block; height: 100%; border-radius: 3px; transform-origin: left center; animation: grow-x 720ms var(--e-enter) backwards; animation-delay: calc(120ms + var(--i, 0) * 70ms); transition: flex-grow 500ms var(--e-standard), opacity var(--d-fast); }
 .macrobar > span:first-child { border-radius: 999px 3px 3px 999px; }
 .macrobar > span:last-child { border-radius: 3px 999px 999px 3px; }
 .macrobar > span:only-child { border-radius: 999px; }
@@ -531,7 +543,7 @@ button.li:active { background: var(--surface-2); }
 .meter { display: grid; gap: 7px; }
 .meter .spread { font-size: 13px; }
 .meter .track { position: relative; height: 6px; border-radius: 999px; background: var(--track); overflow: hidden; }
-.meter .fill { position: absolute; inset: 0 auto 0 0; border-radius: 999px; background: var(--ink); transform-origin: left; animation: grow-x 800ms var(--e-enter) both; animation-delay: calc(160ms + var(--i, 0) * 60ms); }
+.meter .fill { position: absolute; inset: 0 auto 0 0; border-radius: 999px; background: var(--ink); transform-origin: left; animation: grow-x 800ms var(--e-enter) backwards; animation-delay: calc(160ms + var(--i, 0) * 60ms); }
 .meter.over .fill { background: linear-gradient(90deg, var(--ink) 0%, var(--ink) calc(var(--cap) * 100%), var(--critical) calc(var(--cap) * 100%)); }
 .meter .val { font-weight: 550; }
 .meter .of { color: var(--ink-3); }
@@ -559,3 +571,4 @@ button.li:active { background: var(--surface-2); }
 .skeleton::after { content: ''; position: absolute; inset: 0; transform: translateX(-100%); background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--ink) 6%, transparent), transparent); animation: shimmer 1.6s var(--e-standard) infinite; }
 @keyframes shimmer { to { transform: translateX(100%); } }
 [data-motion="reduce"] .skeleton::after { animation: none; }
+.sheet:focus { outline: none; }

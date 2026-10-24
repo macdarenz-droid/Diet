@@ -8,7 +8,7 @@ Quiet, precise, dense where it matters. The references are Linear (near-black su
 
 ## Colour
 
-Two themes, chosen per device: **Night** (default) and **Day**. Interface colour is monochrome; primary buttons are ink on paper (white on Night, black on Day).
+Two themes, chosen per device: **Night** (default) and **Day**. Interface colour is monochrome; primary buttons are ink on paper (white on Night, black on Day). Every text colour, `--ink-3` included, meets 4.5:1 on both surfaces (red team, 2026-10-24).
 
 | Token | Night | Day |
 |---|---|---|
@@ -19,7 +19,7 @@ Two themes, chosen per device: **Night** (default) and **Day**. Interface colour
 | `--line-strong` | `rgb(255 255 255 / .13)` | `rgb(0 0 0 / .13)` |
 | `--ink` | `#f7f8f8` | `#0b0b0c` |
 | `--ink-2` | `#8a8f98` | `#5d5f66` |
-| `--ink-3` | `#5c6068` | `#8d9097` |
+| `--ink-3` | `#7a7f87` | `#6d7077` |
 
 Data colours (validated with the dataviz palette checker on both surfaces, all pairs: colour-blind separation ≥ 9.2, normal vision ≥ 20.9):
 
@@ -37,16 +37,17 @@ Inter Variable for everything people read; Geist Mono Variable for metadata, uni
 
 | Role | Size / line | Weight | Tracking |
 |---|---|---|---|
-| Display (energy total) | 44 / 1.0 | 600 | -0.035em |
-| Title | 22 / 1.2 | 600 | -0.02em |
-| Heading | 15 / 1.3 | 600 | -0.01em |
+| Display (energy total) | 44 / 1.0 | 600 | -0.04em |
+| Screen title | 26 / 1.15 (24 on Result) | 600 | -0.03em |
+| Sheet and card title | 17–18 / 1.25 | 600 | -0.02em |
+| Section heading | 13 / 1.3 | 600 | -0.005em |
 | Body | 14 / 1.5 | 450 | -0.005em |
 | Small | 12.5 / 1.4 | 500 | 0 |
 | Mono label | 11 / 1.2 | 500 | 0.06em, uppercase |
 
 ## Space, shape, depth
 
-4 px grid. Radii 10 (controls), 14 (cards), 22 (sheets). Depth comes from surface steps and a 1 px top highlight (`inset 0 1px 0 rgb(255 255 255 / .04)` on Night), not from heavy shadows. Phone gutter 16 px; content max width 520 px, centred on larger screens.
+4 px grid. Radii 10 (controls), 14 (cards), 22 (sheets). Touch targets are at least 40 px tall (44 for icon buttons); text inputs use 16 px type so iOS does not zoom on focus. Depth comes from surface steps and a 1 px top highlight (`inset 0 1px 0 rgb(255 255 255 / .04)` on Night), not from heavy shadows. Phone gutter 16 px; content max width 520 px, centred on larger screens.
 
 ## Motion
 
@@ -66,7 +67,9 @@ Curves: `standard cubic-bezier(.2,0,0,1)`, `enter cubic-bezier(.05,.7,.1,1)`, `e
 - Screens: forward slides in 24 px with a fade and a 4 px blur clearing; back reverses. The View Transitions API runs it where available; elsewhere the entering screen animates on its own.
 - Lists stagger in by index. Charts grow from zero after their row has landed. Totals count up.
 - Presses scale to 0.97 with a light haptic on Android. Hover (pointer devices) raises borders and runs a spotlight that follows the cursor across cards.
-- Reduce motion (system setting or Profile): transforms and blur are dropped, fades shorten to 120 ms, counts jump to their value.
+- Reduce motion (system setting or Profile): transforms, blur, chart growth, ring sweeps, press scales and the button sheen are dropped; fades shorten to 120 ms; counts jump to their value.
+- Entrance animations fill backwards only, so a finished entrance never holds a transform or opacity that a later swipe, press or fade needs.
+- Accepted: a few short animations change layout (the meal row collapsing on delete, the segmented thumb width, the active dot width); each runs once, under 340 ms.
 
 ## Gestures
 

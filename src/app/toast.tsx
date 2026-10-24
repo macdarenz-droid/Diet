@@ -9,7 +9,7 @@ export const toasts = signal<Toast[]>([]);
 let next = 1;
 
 export function toast(text: string, opts: { action?: Toast['action']; ms?: number } = {}): number {
-  const t: Toast = { id: next++, text, action: opts.action, ms: opts.ms ?? (opts.action ? 5000 : 2600) };
+  const t: Toast = { id: next++, text, action: opts.action, ms: opts.ms ?? (opts.action ? 8000 : 2600) };
   toasts.value = [...toasts.value.slice(-2), t];
   return t.id;
 }
@@ -23,10 +23,15 @@ function ToastView({ t }: { t: Toast }) {
   const [leaving, setLeaving] = useState(false);
   const leave = () => { setLeaving(true); setTimeout(() => dismiss(t.id), dur('exit')); };
 
+  // The timer pauses while the toast is touched, hovered or focused, so Undo stays reachable.
+  const [held, setHeld] = useState(false);
+  const remaining = useRef(t.ms);
   useEffect(() => {
-    const timer = setTimeout(leave, t.ms);
-    return () => clearTimeout(timer);
-  }, [t.id]);
+    if (held) return;
+    const started = Date.now();
+    const timer = setTimeout(leave, remaining.current);
+    return () => { clearTimeout(timer); remaining.current = Math.max(800, remaining.current - (Date.now() - started)); };
+  }, [t.id, held]);
 
   useEffect(() => {
     const el = ref.current;
@@ -45,7 +50,16 @@ function ToastView({ t }: { t: Toast }) {
   }, []);
 
   return (
-    <div ref={ref} class={`toast${leaving ? ' leaving' : ''}`} role="status">
+    <div
+      ref={ref}
+      class={`toast${leaving ? ' leaving' : ''}`}
+      role="status"
+      onPointerEnter={() => setHeld(true)}
+      onPointerLeave={() => setHeld(false)}
+      onPointerDown={() => setHeld(true)}
+      onFocusIn={() => setHeld(true)}
+      onFocusOut={() => setHeld(false)}
+    >
       <span class="grow">{t.text}</span>
       {t.action && <button class="btn sm secondary" onClick={() => { t.action!.run(); leave(); }}>{t.action.label}</button>}
     </div>

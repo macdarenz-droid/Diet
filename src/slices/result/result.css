@@ -69,12 +69,14 @@
 .swap-meta .faint { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .swap-kj { font-size: 15px; font-weight: 600; letter-spacing: -0.02em; }
 .swap-use svg { width: 15px; height: 15px; }
-.dots { display: flex; justify-content: center; gap: 6px; margin-top: 12px; }
-.dots button { width: 6px; height: 6px; padding: 0; border: 0; border-radius: 999px; background: var(--line-strong); transition: width var(--d-sheet) var(--e-spring), background-color var(--d-base); }
-.dots button.on { width: 18px; background: var(--ink); }
+.dots { display: flex; justify-content: center; margin-top: 4px; }
+/* 6 px dots inside 28 px tap targets. */
+.dots button { position: relative; width: 28px; height: 28px; padding: 0; border: 0; background: none; }
+.dots button::before { content: ''; position: absolute; left: 50%; top: 50%; width: 6px; height: 6px; transform: translate(-50%, -50%); border-radius: 999px; background: var(--line-strong); transition: width var(--d-sheet) var(--e-spring), background-color var(--d-base); }
+.dots button.on::before { width: 18px; background: var(--ink); }
 
 /* Dock */
-.dock { position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; padding: 12px var(--gutter) calc(env(safe-area-inset-bottom) + 12px); background: linear-gradient(180deg, transparent, var(--bg) 38%); pointer-events: none; animation: rise var(--d-sheet) var(--e-enter) 200ms both; }
+.dock { position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; padding: 12px var(--gutter) calc(env(safe-area-inset-bottom) + 12px); background: linear-gradient(180deg, transparent, var(--bg) 38%); pointer-events: none; animation: rise var(--d-sheet) var(--e-enter) 200ms backwards; }
 .dock-inner { pointer-events: auto; max-width: var(--max); margin: 0 auto; display: flex; align-items: center; gap: 14px; padding: 8px 8px 8px 16px; border-radius: 18px; background: var(--glass); backdrop-filter: blur(22px) saturate(1.5); -webkit-backdrop-filter: blur(22px) saturate(1.5); border: 1px solid var(--line-strong); box-shadow: var(--shadow-lg); }
 .dock-sum { display: grid; gap: 3px; }
 .dock-kj { font-size: 16px; font-weight: 600; letter-spacing: -0.02em; }
@@ -92,7 +94,7 @@
 .slider:active::-webkit-slider-thumb { transform: scale(1.15); }
 .slider::-moz-range-thumb { width: 18px; height: 18px; border-radius: 50%; background: var(--ink); border: 3px solid var(--surface-1); box-shadow: 0 0 0 1px var(--line-strong); }
 .slider-foot { display: flex; justify-content: flex-end; margin-top: -6px; }
-.link { all: unset; cursor: pointer; color: var(--ink-2); font: inherit; letter-spacing: inherit; text-transform: inherit; }
+.link { all: unset; cursor: pointer; color: var(--ink-2); font: inherit; letter-spacing: inherit; text-transform: inherit; padding: 14px 4px; margin: -14px -4px; }
 .link:focus-visible { outline: 2px solid color-mix(in srgb, var(--ink) 55%, transparent); }
 @media (hover: hover) and (pointer: fine) { .link:hover { color: var(--ink); } }
 .item-grid .v { font-size: 15px; }

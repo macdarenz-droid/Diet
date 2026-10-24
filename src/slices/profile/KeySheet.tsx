@@ -19,7 +19,8 @@ export function maskKey(k: string): string {
 }
 
 export function KeySheet({ which, onClose, onSaved }: { which: Which; onClose: () => void; onSaved?: () => void }) {
-  const [value, setValue] = useState(keys.value[which]);
+  // Write-only: the stored key is never put back into the page; the field shows its last four digits.
+  const [value, setValue] = useState('');
   const c = COPY[which];
   const save = (close: () => void) => {
     keys.value = { ...keys.value, [which]: value.trim() };
@@ -36,7 +37,7 @@ export function KeySheet({ which, onClose, onSaved }: { which: Which; onClose: (
             autoComplete="off"
             autoCapitalize="off"
             spellcheck={false}
-            placeholder={c.placeholder}
+            placeholder={keys.value[which] ? maskKey(keys.value[which]) : c.placeholder}
             value={value}
             onInput={e => setValue((e.target as HTMLInputElement).value)}
             aria-label={c.title}

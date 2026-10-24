@@ -7,6 +7,7 @@ import { App } from './app/App';
 import { initRouter } from './app/router';
 import { initMotion } from './ui/motion';
 import { initClock } from './core/clock';
+import { initViewport } from './app/viewport';
 import { prefs } from './core/store';
 import { loadMeals } from './slices/today/meals';
 import { toast } from './app/toast';
@@ -21,6 +22,7 @@ effect(applyTheme);
 initMotion();
 initRouter();
 initClock();
+initViewport();
 void loadMeals();
 render(<App />, document.getElementById('app')!);
 

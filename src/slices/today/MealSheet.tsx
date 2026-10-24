@@ -17,11 +17,10 @@ export function MealSheet({ meal, onClose }: { meal: Meal; onClose: () => void }
     if (removed) toast('Meal deleted', { action: { label: 'Undo', run: () => { void logMeal(removed); } } });
   };
   return (
-    <Sheet label={meal.dish} onClose={onClose}>
+    <Sheet title={meal.dish} onClose={onClose}>
       {close => <>
       {meal.thumb && <img class="meal-hero" src={meal.thumb} alt="" />}
       <div class="meal-head">
-        <div class="t">{meal.dish}</div>
         <div class="m muted">{fmtDay(meal.at)} · {fmtTime(meal.at)}{meal.swappedFrom ? ` · Swap for ${meal.swappedFrom}` : ''}</div>
       </div>
       <Breakdown n={meal.totals} unit={unit} />

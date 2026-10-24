@@ -9,6 +9,7 @@ import { dur } from './motion';
 import { Close } from './icons';
 
 let seq = 0;
+let openSheets = 0;
 
 /** children may be a function of `close`, which runs the exit animation before onClose. */
 export function Sheet({ title, onClose, children, actions, label }: { title?: string; label?: string; onClose: () => void; children: ComponentChildren | ((close: () => void) => ComponentChildren); actions?: ComponentChildren }) {
@@ -35,11 +36,34 @@ export function Sheet({ title, onClose, children, actions, label }: { title?: st
 
   useEffect(() => {
     registerSheet(id, close);
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') close(); };
+    // Focus moves into the sheet and stays there; the app behind is inert; focus returns on close.
+    const opener = document.activeElement as HTMLElement | null;
+    const app = document.getElementById('app');
+    const wasInert = !!app?.inert;
+    if (app) app.inert = true;
+    openSheets++;
+    document.documentElement.dataset.sheet = '';
+    const el = sheet.current;
+    el?.focus({ preventScroll: true });
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') { close(); return; }
+      if (e.key !== 'Tab' || !el) return;
+      const f = [...el.querySelectorAll<HTMLElement>('button, [href], input, textarea, select, [tabindex]:not([tabindex="-1"])')].filter(x => !x.hasAttribute('disabled'));
+      if (!f.length) { e.preventDefault(); return; }
+      const first = f[0]!, last = f[f.length - 1]!;
+      if (e.shiftKey && (document.activeElement === first || document.activeElement === el)) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    };
     window.addEventListener('keydown', onKey);
     const prev = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
-    return () => { window.removeEventListener('keydown', onKey); document.body.style.overflow = prev; unregisterSheet(id); };
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      document.body.style.overflow = prev;
+      if (--openSheets === 0) { if (app && !wasInert) app.inert = false; delete document.documentElement.dataset.sheet; }
+      unregisterSheet(id);
+      if (opener?.isConnected) opener.focus({ preventScroll: true });
+    };
   }, []);
 
   useEffect(() => {
@@ -63,7 +87,7 @@ export function Sheet({ title, onClose, children, actions, label }: { title?: st
   return createPortal(
     <>
       <div class={`scrim${state === 'closing' ? ' closing' : ''}`} onClick={close} />
-      <div ref={sheet} class={`sheet${state === 'open' ? ' open' : ''}${state === 'closing' ? ' closing' : ''}`} role="dialog" aria-modal="true" aria-label={title ?? label}>
+      <div ref={sheet} tabIndex={-1} class={`sheet${state === 'open' ? ' open' : ''}${state === 'closing' ? ' closing' : ''}`} role="dialog" aria-modal="true" aria-label={title ?? label}>
         <div ref={grab} class="sheet-top">
           <div class="grab" />
           {title && (

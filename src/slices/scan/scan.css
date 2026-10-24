@@ -46,7 +46,7 @@
 .step.now { color: var(--ink); }
 .step-mark { display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; border: 1px solid var(--line-strong); flex: none; transition: background-color var(--d-base), border-color var(--d-base); }
 .step.done .step-mark { background: var(--ink); border-color: var(--ink); color: var(--on-ink); }
-.step.done .step-mark svg { width: 13px; height: 13px; stroke-width: 2.2; stroke-dasharray: 24; animation: draw 360ms var(--e-enter) both; }
+.step.done .step-mark svg { width: 13px; height: 13px; stroke-width: 2.2; stroke-dasharray: 24; animation: draw 360ms var(--e-enter) backwards; }
 @keyframes draw { from { stroke-dashoffset: 24; } to { stroke-dashoffset: 0; } }
 .step-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--ink-3); }
 .step.now .step-mark { border-color: var(--ink); }

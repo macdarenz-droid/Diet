@@ -50,6 +50,7 @@
 }
 @media (hover: hover) and (pointer: fine) { .meal-face:hover { border-color: var(--line-strong); } }
 .meal-face:active { background: var(--surface-2); }
+.meal-face:focus-visible { outline-offset: -2px; }
 .meal-thumb { width: 46px; height: 46px; border-radius: 10px; object-fit: cover; flex: none; background: var(--surface-2); }
 .meal-thumb.blank { display: grid; place-items: center; color: var(--ink-3); border: 1px solid var(--line); }
 .meal-thumb.blank svg { width: 18px; height: 18px; }
