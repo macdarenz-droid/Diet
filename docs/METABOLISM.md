@@ -134,7 +134,7 @@ This is the idea behind Hall and Chow's method, which recovered intake changes f
 6. Running estimate (a one-state Kalman filter): start from the formula and its spread; for each window carry the estimate to the window's weight by the resting equation, widen it by 5% for real change (a Nuance choice), and combine it with the window's value, each weighted by 1 / variance.
 7. Confidence is the share of the formula's variance the data has removed: none (no usable window), low (under 0.40), medium (0.40 to 0.65), high (0.65 and over).
 
-So the first measured value can appear about 4 weeks after the first weigh-in, is usually medium after 6 weeks and high after 2 to 3 months of near-daily weigh-ins and logs. In tests, with true expenditure 2,600 kcal/day and the formula saying about 2,940, 12 weeks of data brought the estimate within 150 kcal; the mean error over 20 random runs was under 60 kcal.
+So the first measured value can appear about 4 weeks after the first weigh-in (two weeks skipped, then two weeks of data). In simulations with daily weigh-ins and logs, one full 28-day window (6 weeks in) gave medium or high confidence, and 12 weeks gave high. In tests, with true expenditure 2,600 kcal/day and the formula saying about 2,940, 12 weeks of data brought the estimate within 150 kcal; the mean error over 20 random runs was under 60 kcal.
 
 ## 7. Trend weight
 
