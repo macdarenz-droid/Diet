@@ -13,8 +13,9 @@ import { setTimeout as sleep } from 'node:timers/promises';
 
 const { chromium } = createRequire(import.meta.url)('playwright');
 const photo = process.argv[2] && existsSync(process.argv[2]) ? process.argv[2] : null;
-const OUT = 'screenshots';
-const PORT = 4173;
+// SCREENS_PORT and SCREENS_OUT let parallel runs (reviewers in worktrees) avoid each other.
+const OUT = process.env.SCREENS_OUT || 'screenshots';
+const PORT = Number(process.env.SCREENS_PORT) || 4173;
 mkdirSync(OUT, { recursive: true });
 
 const n = (kcal, protein, carbs, fat, sat_fat, fibre, sugars, sodium_mg) => ({ kcal, protein, carbs, fat, sat_fat, fibre, sugars, sodium_mg });
