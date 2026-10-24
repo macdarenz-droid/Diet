@@ -5,7 +5,7 @@ import { FdcError, search, type Candidate } from './fdc';
 import { applyCandidate, choose } from './ground';
 
 const TTL_MS = 30 * 24 * 60 * 60 * 1000;
-const PREFIX = 'diet.fdc.';
+const PREFIX = 'nuance.fdc.';
 const PARALLEL = 4;
 
 export interface Cache {

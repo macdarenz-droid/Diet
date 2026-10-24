@@ -103,9 +103,9 @@ async function run(theme, region) {
   await ctx.addInitScript(([theme, region]) => {
     if (sessionStorage.getItem('seeded')) return;
     sessionStorage.setItem('seeded', '1');
-    localStorage.setItem('diet.keys', JSON.stringify({ claude: 'mock-claude-key', usda: 'mock-usda-key' }));
-    localStorage.setItem('diet.prefs', JSON.stringify({ theme, reduceMotion: false }));
-    localStorage.setItem('diet.profile', JSON.stringify({ goal: 'lose', diet: 'any', avoid: '', region, unit: region === 'AU' ? 'kJ' : 'kcal', targets: { energy: 2000, protein: 100, fibre: 30, sugars: 50, sodium: 2000 } }));
+    localStorage.setItem('nuance.keys', JSON.stringify({ claude: 'mock-claude-key', usda: 'mock-usda-key' }));
+    localStorage.setItem('nuance.prefs', JSON.stringify({ theme, reduceMotion: false }));
+    localStorage.setItem('nuance.profile', JSON.stringify({ goal: 'lose', diet: 'any', avoid: '', region, unit: region === 'AU' ? 'kJ' : 'kcal', targets: { energy: 2000, protein: 100, fibre: 30, sugars: 50, sodium: 2000 } }));
   }, [theme, region]);
   const page = await ctx.newPage();
   page.on('console', m => { if (m.type() === 'error') problems.push(`[${theme}] console: ${m.text()}`); });

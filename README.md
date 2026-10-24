@@ -1,4 +1,4 @@
-# Diet
+# Nuance
 
 Photo or text in; an itemised nutrition breakdown with honest ranges and healthier swaps out. A Progressive Web App for Android and iOS (add to home screen), built for Australia and the Philippines.
 
@@ -27,4 +27,4 @@ Without a USDA key the app still works; values are then Claude's estimates and a
 
 ## Host
 
-Any static host works: build with `npm run build` and serve `dist/`. The repository is private, so GitHub Pages needs a paid plan or a public repository; Cloudflare Pages or Vercel can deploy a private repository from their dashboards (build command `npm run build`, output directory `dist`; check their current free-plan terms). Hosting is connected by the owner (AGENTS.md, "Only the owner").
+GitHub Pages, published from `main` by `.github/workflows/pages.yml`: https://macdarenz-droid.github.io/Diet/. Repository Settings > Pages > Source must be set to "GitHub Actions" once. On a phone, open the link and choose Add to Home Screen.

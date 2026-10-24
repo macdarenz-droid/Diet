@@ -2,7 +2,7 @@
 // Same-origin GETs are served cache-first; API calls to other hosts never touch the cache.
 const VERSION = '__VERSION__';
 const FILES = __FILES__;
-const CACHE = `diet-${VERSION}`;
+const CACHE = `nuance-${VERSION}`;
 
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES)));
@@ -11,7 +11,7 @@ self.addEventListener('install', event => {
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys()
-      .then(keys => Promise.all(keys.filter(k => k.startsWith('diet-') && k !== CACHE).map(k => caches.delete(k))))
+      .then(keys => Promise.all(keys.filter(k => k.startsWith('nuance-') && k !== CACHE).map(k => caches.delete(k))))
       .then(() => self.clients.claim()),
   );
 });

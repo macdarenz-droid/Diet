@@ -3,7 +3,7 @@
 (function () {
   var d = document.documentElement;
   try {
-    var prefs = JSON.parse(localStorage.getItem('diet.prefs') || '{}');
+    var prefs = JSON.parse(localStorage.getItem('nuance.prefs') || '{}');
     if (prefs.theme === 'day' || prefs.theme === 'night') d.setAttribute('data-theme', prefs.theme);
     if (prefs.reduceMotion) d.setAttribute('data-motion', 'reduce');
   } catch (e) {}

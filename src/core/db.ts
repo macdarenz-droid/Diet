@@ -1,7 +1,7 @@
-// The meal log in IndexedDB (database `diet`, store `meals`). Owner-gated (AGENTS.md).
+// The meal log in IndexedDB (database `nuance`, store `meals`). Owner-gated (AGENTS.md).
 import type { Meal } from './models';
 
-const DB = 'diet';
+const DB = 'nuance';
 const STORE = 'meals';
 const VERSION = 1;
 

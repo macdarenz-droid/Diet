@@ -152,7 +152,7 @@ export function Profile() {
         <Button variant="secondary" block onClick={() => setClearing(true)}><Trash />Clear food log</Button>
       </Section>
 
-      <p class="mono version" style={{ '--i': 11 } as JSX.CSSProperties}>Diet {__APP_VERSION__}</p>
+      <p class="mono version" style={{ '--i': 11 } as JSX.CSSProperties}>Nuance {__APP_VERSION__}</p>
 
       {keySheet.value && <KeySheet which={keySheet.value} onClose={() => { keySheet.value = null; }} />}
       {clearing && <ClearSheet onClose={() => setClearing(false)} />}

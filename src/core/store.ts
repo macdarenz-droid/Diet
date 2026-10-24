@@ -14,7 +14,7 @@ export function defaultProfile(region: Region = 'AU'): Profile {
   return { goal: 'lose', diet: 'any', avoid: '', region, unit: region === 'AU' ? 'kJ' : 'kcal', targets: { ...DEFAULT_TARGETS } };
 }
 
-const KEYS = { profile: 'diet.profile', keys: 'diet.keys', prefs: 'diet.prefs', usage: 'diet.usage' } as const;
+const KEYS = { profile: 'nuance.profile', keys: 'nuance.keys', prefs: 'nuance.prefs', usage: 'nuance.usage' } as const;
 
 function read<T>(key: string, fallback: T): T {
   try {

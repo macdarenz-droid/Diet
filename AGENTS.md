@@ -1,6 +1,6 @@
 # Working rules for every agent in this repo
 
-The owner's rules, copied from M/ARC (`macdarenz-droid/M-arc`, AGENTS.md) on 2026-10-24 and adapted to this app. The rules that apply to every project are kept word for word; only the parts that named M/ARC's files, APKs or services changed.
+The owner's rules for Nuance, copied from M/ARC (`macdarenz-droid/M-arc`, AGENTS.md) on 2026-10-24 and adapted to this app. The rules that apply to every project are kept word for word; only the parts that named M/ARC's files, APKs or services changed.
 
 ## ULTIMATE RULE (owner, 2026-09-26): above every other rule, mode or permission
 Use what's necessary for high-quality output and a fast workflow, while saving tokens.
@@ -14,6 +14,7 @@ Use what's necessary for high-quality output and a fast workflow, while saving t
 - UI copy (owner, 2026-10-01): never put words in the app or on the website that talk down to users or state the obvious ("In plain words", "Not medical advice"). Explain nothing unless an app store requires it (cite the policy) or the owner explicitly asked for it. Labels that name a control or show data stay. Plain words are for messages to the owner, not a label on user-facing text. Headings (owner, 2026-10-01) are short labels of one to three words, a noun phrase: never a sentence, a "What ..."/"How ..." question, a qualifier such as "off by default" or ", and where", or a leading "The", "This" or "About"; the text under a heading explains it.
 - No AI wording (owner, 2026-10-24): the app must never read as generated or "vibe coded". No stock AI phrases ("At a glance", "Unlock", "Supercharge", "Seamless", "Your journey", "Powered by AI", "Smart", "Magic"), no sparkle icons, no exclamation marks, no emoji in the interface. Labels are the words a careful human editor would print: specific, quiet, professional. `tests/copy.test.ts` holds the banned list; add to it, never remove from it.
 - Look and feel (owner, 2026-10-24): premium product quality in the spirit of Linear and Vercel, never a generic template. Every screen has considered motion: hover and press states, gestures, transitions, reduced-motion support. Tokens live in `src/ui/styles.css` and `src/ui/motion.ts`; see `docs/DESIGN.md`.
+- Review and red team (owner, 2026-10-24): every long checkpoint (a finished phase, a large change, anything before a merge or release) gets a fresh-context review and an adversarial red-team pass before work moves on. The reviewer checks the diff against its spec (`.claude/skills/reviewer/SKILL.md`); red teamers try to break it (`.claude/skills/red-team/SKILL.md`). Every finding is fixed, or recorded with the reason it stays. Work fast, in parallel where the parts are independent, but with care and detail: speed never costs quality.
 - Owner chat (owner, 2026-10-01): work in the background and keep the owner's chat quiet. Post there only:
   - a new build: its link, what changed, and what to check on the phone;
   - a problem no agent can solve;
@@ -47,8 +48,10 @@ Adopted from the owner's Agent Delivery Playbook on 2026-09-26. The supervisor k
 - Run in auto mode (owner, 2026-09-28): the supervisor starts every builder and reviewer session in auto mode, so no work waits on the owner's approval taps. Auto mode's safety checks still apply, and a refusal is never worked around.
 - Models: a strong model for hard judgement, `claude-opus-5-5` (planning, judging, reviewing, and any card that is not mechanical); a lighter one for mechanical steps, `claude-sonnet-5` (every step spelled out). Never Haiku or Fable. The built-in Explore and claude-code-guide helpers run on Haiku, so they are blocked. For a search, use a general-purpose helper that names `sonnet`. Helpers that name no model use the session's model.
 
+**Hosting** (owner, 2026-10-24): GitHub Pages, published from `main` by `.github/workflows/pages.yml` at https://macdarenz-droid.github.io/Diet/. The repository is public, so the "Never commit keys or secrets" rule matters twice over.
+
 **Only the owner:**
-- connects hosting (Cloudflare Pages, Vercel or GitHub Pages) and owns its settings;
+- owns the repository and Pages settings;
 - holds the Claude API key and the USDA FoodData Central key, and enters them on his own devices;
 - publishes releases and store listings;
 - approves new kinds of stored or sent user data, new paid services or providers, and any spending (test calls to the live Claude API use the owner's key).
@@ -65,7 +68,7 @@ Adopted from the owner's Agent Delivery Playbook on 2026-09-26. The supervisor k
 
 | Path | Owner | Rule for everyone else |
 |---|---|---|
-| `.github/**` | supervisor | Add checks only. |
+| `.github/**` | supervisor | Add checks only. `pages.yml` deploys production. |
 | `package.json`, `package-lock.json` | supervisor | No new dependency without the supervisor's OK. The lockfile comes from npm. |
 | Saved data shape (`src/core/models.ts`, `src/core/store.ts`, `src/core/db.ts`) | the owner approves | New kinds of saved data need the owner's approval first. |
 | `src/ai/prompts.ts`, `src/ai/schema.ts` | the task card that owns the AI contract | The prompt and the output schema change together, with a test in `tests/ai.test.ts`. |

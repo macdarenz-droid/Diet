@@ -8,7 +8,7 @@ Take a photo or a description of food, return an itemised nutrition breakdown wi
 
 ## 2. Shape
 
-A static Progressive Web App. No server and no accounts. The browser talks straight to the APIs below; everything else stays on the device.
+A static Progressive Web App, hosted on GitHub Pages from `main` (`.github/workflows/pages.yml`). No server and no accounts. The browser talks straight to the APIs below; everything else stays on the device.
 
 ```
  Phone (PWA)
@@ -92,12 +92,12 @@ USDA nutrient ids used (checked against a live response on 2026-10-24): 1008 ene
 
 | Store | Key | Holds |
 |---|---|---|
-| localStorage | `diet.profile` | goal, focus nutrients, diet, allergies, dislikes, region, energy unit, daily targets |
-| localStorage | `diet.keys` | Claude key, USDA key |
-| localStorage | `diet.prefs` | theme, reduce motion |
-| localStorage | `diet.usage` | token counts per month |
-| localStorage | `diet.fdc.*` | USDA lookups, 30-day expiry |
-| IndexedDB `diet` / `meals` | meal id | logged meals: time, dish, grounded items, totals, chosen swap, thumbnail |
+| localStorage | `nuance.profile` | goal, focus nutrients, diet, allergies, dislikes, region, energy unit, daily targets |
+| localStorage | `nuance.keys` | Claude key, USDA key |
+| localStorage | `nuance.prefs` | theme, reduce motion |
+| localStorage | `nuance.usage` | token counts per month |
+| localStorage | `nuance.fdc.*` | USDA lookups, 30-day expiry |
+| IndexedDB `nuance` / `meals` | meal id | logged meals: time, dish, grounded items, totals, chosen swap, thumbnail |
 
 Day boundaries use the device's local time zone (tests run in Sydney and Manila).
 

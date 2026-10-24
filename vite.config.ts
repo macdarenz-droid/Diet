@@ -26,7 +26,7 @@ export const CSP = [
  * precaches this build's files under a version derived from their names. */
 function pwa(): Plugin {
   return {
-    name: 'diet-pwa',
+    name: 'nuance-pwa',
     apply: 'build',
     transformIndexHtml(html) {
       return html.replace('<!--csp-->', `<meta http-equiv="Content-Security-Policy" content="${CSP}" />`);
