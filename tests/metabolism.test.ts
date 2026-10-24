@@ -394,7 +394,7 @@ describe('a log missing meals', () => {
   // 920 kcal). Read at face value her maintenance would be about 920, under her resting 1,450.
   const woman: BodyProfile = { sex: 'female', age: 30, heightCm: 165, weightKg: 70, activity: 'light' };
   const s = simulate(woman, { days: 70, seed: 7, intake: () => 2050, tdee: () => 2050, noiseKcal: 150 });
-  const logged = s.intakes.map(d => ({ ...d, kcal: d.kcal * 0.45 }));
+  const logged = s.intakes.map(d => ({ ...d, kcal: d.kcal * 0.45, protein: d.protein * 0.45 }));
 
   it('sets the window aside instead of lowering maintenance', () => {
     const e = estimateExpenditure({ profile: woman, age: 30, weighIns: s.weighIns, intakes: logged, today: s.todayN });
@@ -409,6 +409,13 @@ describe('a log missing meals', () => {
     expect(kinds).toContain('partial-log');
     expect(kinds).not.toContain('intake-below-floor');
     expect(kinds).not.toContain('need-data');
+    // Cards that read the same log would repeat the missing meals as fact.
+    expect(kinds).not.toContain('protein-low');
+    expect(kinds).not.toContain('plateau');
+    const card = a.insights.find(i => i.id === 'partial-log')!;
+    if (card.id !== 'partial-log') throw new Error('unreachable');
+    // The measured burn (logged intake plus the energy of the weight change) is under 1.2 x resting.
+    expect(card.numbers.measuredKcal).toBeLessThan(card.numbers.minimumKcal);
     expect(a.targets.kcal).toBeGreaterThanOrEqual(FLOOR.female);
     expect(a.targets.maintenanceKcal).toBeGreaterThan(1900);
   });

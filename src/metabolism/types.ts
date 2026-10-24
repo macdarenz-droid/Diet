@@ -193,7 +193,7 @@ interface Base<K extends string, N> {
 export type Insight =
   | (Base<'excluded', Record<string, never>> & { reason: ExclusionReason })
   | Base<'underweight', { bmi: number }>
-  | Base<'partial-log', { meanIntakeKcal: number; restingKcal: number; loggedDays: number }>
+  | Base<'partial-log', { measuredKcal: number; minimumKcal: number; loggedDays: number }>
   | Base<'need-data', { windowDays: number; loggedDays: number; weighIns: number; minLoggedDays: number; minWeighIns: number }>
   | Base<'intake-below-floor', { meanIntakeKcal: number; floorKcal: number; days: number }>
   | Base<'rate-too-fast', { ratePctPerWeek: number; maxPctPerWeek: number; days: number }>

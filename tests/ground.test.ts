@@ -63,6 +63,25 @@ describe('choose, on the shipped tables', () => {
     expect(choose('rice, white, cooked', per100({ kcal: 600 }), await search('rice, white, cooked'))).toBeNull();
   });
 
+  it.each([
+    ['tofu', 76, /tofu|soybean curd/i, /yogurt/i],
+    ['oats, cooked', 70, /oats/i, /bran/i],
+    ['beef mince, cooked', 250, /beef, mince/i, /\braw\b/i],
+    ['chicken thigh, roasted, with skin', 230, /thigh/i, /^$/],
+  ] as const)('%s matches the food itself, cooked as asked', async (q, kcal, want, not) => {
+    const c = choose(q, per100({ kcal }), await search(q));
+    expect(c?.description).toMatch(want);
+    expect(c!.description.replace(/from raw/i, '')).not.toMatch(not);
+  });
+
+  it('rejects a compound naming another food, and raw for cooked', () => {
+    expect(choose('tofu', per100({ kcal: 76 }), [cand('Tofu yogurt', 90)])).toBeNull();
+    expect(choose('toast', per100({ kcal: 290 }), [cand('French toast, NFS', 230)])).toBeNull();
+    expect(choose('rice, white, cooked', per100({ kcal: 130 }), [cand('Rice, white, raw', 160)])).toBeNull();
+    expect(choose('carrot, raw', per100({ kcal: 41 }), [cand('Carrots, boiled', 35)])).toBeNull();
+    expect(choose('chicken thigh, roasted', per100({ kcal: 230 }), [cand('Chicken thigh, roasted, from raw', 230)])?.description).toBe('Chicken thigh, roasted, from raw');
+  });
+
   it('keeps the estimate when nothing shares the name', async () => {
     expect(choose('sinigang', per100({ kcal: 40 }), await search('sinigang'))).toBeNull();
   });

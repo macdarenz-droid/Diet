@@ -90,7 +90,7 @@ export function word(i: Insight, c: WordContext): Worded {
     }
     case 'partial-log': {
       const n = i.numbers;
-      return out('Incomplete log', `Your log averages ${w.perDay(n.meanIntakeKcal)} over ${w.days(n.loggedDays)}, under the ${w.e(n.restingKcal)} your body burns at rest, so some meals are missing from it.`);
+      return out('Incomplete log', `Over ${w.days(n.loggedDays)}, your log and weigh-ins add up to a burn of ${w.perDay(n.measuredKcal)}, under the ${w.e(n.minimumKcal)} a body your size uses even on a day of rest, so some meals are missing from the log.`);
     }
     case 'plateau': {
       const n = i.numbers;

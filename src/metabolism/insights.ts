@@ -1,7 +1,7 @@
 // The whole assessment and its ranked insights. Insights carry kinds and numbers only; the UI words them.
 import {
   DIET_BREAK_AFTER_WEEKS, DIET_BREAK_WEEKS, DRIFT, EXPENDITURE_UPDATE_REL, FLOOR_KCAL, GAIN_RATE, GLYCOGEN_SKIP_DAYS, LOSS_RATE,
-  MILESTONE_LOSS_PCT, MIN_COVERAGE, MIN_SPAN_DAYS, MIN_WEIGH_INS, PROTEIN, RESISTANCE_SESSIONS_PER_WEEK, STEPS, WINDOW_DAYS,
+  MILESTONE_LOSS_PCT, MIN_COVERAGE, MIN_SPAN_DAYS, MIN_WEIGH_INS, PROTEIN, RESISTANCE_SESSIONS_PER_WEEK, STEPS, WINDOW_DAYS, MIN_MEASURED_PAL,
 } from './constants';
 import { estimateExpenditure, firstWeighDay, intakesIn } from './adaptive';
 import { detectAdaptation, detectPlateau, losingStreak, recentRate } from './detect';
@@ -105,10 +105,11 @@ export function assess(input: AssessInput): Assessment {
   }
 
   if (partial) {
-    out.push({ id: 'partial-log', severity: 'medium', numbers: { meanIntakeKcal: Math.round(partial.meanIntakeKcal), restingKcal: Math.round(partial.restingKcal), loggedDays: partial.loggedDays }, action: { kind: 'log-consistently', days: WINDOW_DAYS }, also: [] });
+    out.push({ id: 'partial-log', severity: 'medium', numbers: { measuredKcal: Math.round(partial.kcal), minimumKcal: Math.round(MIN_MEASURED_PAL * partial.restingKcal), loggedDays: partial.loggedDays }, action: { kind: 'log-consistently', days: WINDOW_DAYS }, also: [] });
   }
 
-  if (plateau) {
+  // Cards read from logged intake would repeat the missing meals as fact, so an incomplete log stands alone.
+  if (plateau && !partial) {
     const action: Action =
       plateau.cause === 'logging-gaps' ? { kind: 'log-consistently', days: plateau.days }
       : plateau.cause === 'intake-rise' ? { kind: 'return-to-target', kcal }
@@ -133,7 +134,7 @@ export function assess(input: AssessInput): Assessment {
     }
   }
 
-  if (targets.proteinG !== null && last14.length >= 7) {
+  if (!partial && targets.proteinG !== null && last14.length >= 7) {
     const avg = last14.reduce((s, d) => s + (Number.isFinite(d.protein) ? d.protein : 0), 0) / last14.length;
     if (avg < PROTEIN.lowShare * targets.proteinG) {
       const also: Action[] = goal === 'lose' || goal === 'muscle' ? [train] : [];
@@ -148,7 +149,7 @@ export function assess(input: AssessInput): Assessment {
     }
   }
 
-  if (rate && !plateau && (goal === 'lose' || goal === 'muscle') && targets.ratePctPerWeek !== 0) {
+  if (rate && !plateau && !partial && (goal === 'lose' || goal === 'muscle') && targets.ratePctPerWeek !== 0) {
     const planned = targets.ratePctPerWeek;
     const observed = rate.ratePctPerWeek;
     const tooFast = fast || fastGain || (goal === 'lose' ? observed < -LOSS_RATE.max : observed > GAIN_RATE.max);

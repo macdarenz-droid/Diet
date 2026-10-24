@@ -59,9 +59,11 @@ export const clearWeighIns = (): Promise<undefined> => tx('readwrite', s => s.cl
  * usage, offline copy), then reloads into a fresh app. Each store is cleared on its own, so one failure
  * does not leave the others behind. */
 export async function eraseAll(): Promise<void> {
-  try { await clearMeals(); } catch { /* database blocked */ }
-  try { await clearWeighIns(); } catch { /* database blocked */ }
+  // Storage that cannot hang goes first; the database waits at most 3 s (another tab can block it).
   try { for (const k of Object.keys(localStorage)) if (k.startsWith('nuance.')) localStorage.removeItem(k); } catch { /* storage blocked */ }
+  const limit = <T>(p: Promise<T>) => Promise.race([p, new Promise<void>(r => setTimeout(r, 3000))]);
+  try { await limit(clearMeals()); } catch { /* database blocked */ }
+  try { await limit(clearWeighIns()); } catch { /* database blocked */ }
   try { for (const k of await caches.keys()) if (k.startsWith('nuance-')) await caches.delete(k); } catch { /* no Cache Storage */ }
   location.reload();
 }

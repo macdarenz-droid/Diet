@@ -122,7 +122,7 @@ This is the idea behind Hall and Chow's method, which recovered intake changes f
 
 **How much data.** Daily weights over more than 28 days were needed for a 95% interval narrower than 300 kcal/day [Hall & Chow 2011].
 
-**Logging bias.** People who said they could not lose weight on under 1,200 kcal under-reported intake by 47% and over-reported activity by 51% [Lichtman 1992]. Nuance's measured expenditure is in the units of the person's own log: if someone logs 20% low every day, the measured maintenance is 20% low too, and targets set against the same log still work. Logging that is complete on some days and not others cannot be corrected; the app should pass only finished days. The app (`src/slices/body/body.ts`, `intakesFrom`) passes every earlier day, never today, and leaves out days under 800 kcal: diets below that need medical supervision [Jensen 2014], so such a day is far more often a half-logged one. A person truly eating under 800 kcal a day therefore gets no low-intake insight from those days; a "day finished" marker would close that gap but is new saved data (owner approval).
+**Logging bias.** People who said they could not lose weight on under 1,200 kcal under-reported intake by 47% and over-reported activity by 51% [Lichtman 1992]. Nuance's measured expenditure is in the units of the person's own log: if someone logs 20% low every day, the measured maintenance is 20% low too, and targets set against the same log still work. Logging that is complete on some days and not others cannot be corrected; the app should pass only finished days. The app (`src/slices/body/body.ts`, `intakesFrom`) passes every earlier day, never today, and leaves out days under 800 kcal: diets below that need medical supervision [Jensen 2014], so such a day is far more often a half-logged one. When at least 7 of the last 14 days are that low and, with them kept, the measured burn passes the 1.2 x resting check below (the weight falls to match), they are what the person eats and are kept, so the low-intake insight shows (`assessLog`).
 
 **Nuance's rules** (`src/metabolism/adaptive.ts`):
 
@@ -180,7 +180,7 @@ Insights are data; the UI words them. Each has `id`, `severity` (high, medium, l
 | rate-too-fast | ratePctPerWeek, maxPctPerWeek, days | raise-intake (kcal) |
 | gain-too-fast | ratePctPerWeek, maxPctPerWeek, days | reduce-intake (kcal) |
 | adaptation | expectedKcal, observedKcal, gapKcal, gapPct, lossPct, weeks | diet-break (weeks, kcal); also resistance-train, add-steps |
-| partial-log | meanIntakeKcal, restingKcal, loggedDays | log-consistently (days) |
+| partial-log | measuredKcal, minimumKcal (1.2 x resting), loggedDays; while it shows, plateau, protein-low, rate-too-slow, intake-below-floor and need-data are held back, since they read the same incomplete log | log-consistently (days) |
 | plateau | days, ratePctPerWeek, meanIntakeKcal, previousMeanIntakeKcal (cause: logging-gaps, intake-rise, adaptation, unexplained) | log-consistently, return-to-target, diet-break, reduce-intake or add-steps |
 | diet-break | lossPct, weeksLosing (trigger: milestone, duration) | diet-break (weeks, kcal) |
 | protein-low | averageG, targetG, days | raise-protein (grams, targetGrams) |

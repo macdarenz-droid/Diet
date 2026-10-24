@@ -2,7 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Action, BodyProfile, Insight, WeighIn } from '@/metabolism';
 import { assess, compositionAt, energyDensity, KIND_ORDER, mifflinStJeor, referenceComposition, trendWeights } from '@/metabolism';
-import { PACE, PARTIAL_DAY_KCAL, birthYears, bodyProfile, complete, intakesFrom, logWeight, paceFor, restoreWeight, weekChange, weighIns } from '@/slices/body/body';
+import { PACE, PARTIAL_DAY_KCAL, assessLog, birthYears, bodyProfile, complete, intakesFrom, logWeight, paceFor, restoreWeight, weekChange, weighIns } from '@/slices/body/body';
 import { word, wordAction, wordPace, type WordContext } from '@/slices/body/words';
 import { purgeLegacy } from '@/core/store';
 import { parseKg } from '@/slices/body/WeightSheet';
@@ -28,7 +28,7 @@ const ALL: Insight[] = [
     action: cause === 'logging-gaps' ? { kind: 'log-consistently', days: 28 } : cause === 'intake-rise' ? { kind: 'return-to-target', kcal: 1950 } : cause === 'adaptation' ? { kind: 'diet-break', weeks: 2, kcal: 2300 } : { kind: 'reduce-intake', kcal: 1900 },
     also: [walk, train],
   })),
-  { id: 'partial-log', severity: 'medium', numbers: { meanIntakeKcal: 920, restingKcal: 1450, loggedDays: 24 }, action: { kind: 'log-consistently', days: 28 }, also: [] },
+  { id: 'partial-log', severity: 'medium', numbers: { measuredKcal: 1150, minimumKcal: 1740, loggedDays: 24 }, action: { kind: 'log-consistently', days: 28 }, also: [] },
   { id: 'diet-break', severity: 'medium', trigger: 'milestone', numbers: { lossPct: 10.2, weeksLosing: 14 }, action: { kind: 'diet-break', weeks: 2, kcal: 2500 }, also: [train, walk] },
   { id: 'diet-break', severity: 'medium', trigger: 'duration', numbers: { lossPct: 6, weeksLosing: 12 }, action: { kind: 'diet-break', weeks: 2, kcal: 2500 }, also: [train, walk] },
   { id: 'protein-low', severity: 'medium', numbers: { averageG: 82, targetG: 140, days: 13 }, action: { kind: 'raise-protein', grams: 58, targetGrams: 140 }, also: [train] },
@@ -284,5 +284,42 @@ describe('legacy data', () => {
     purgeLegacy(storage);
     expect([...m.keys()].sort()).toEqual(['nuance.keys', 'nuance.profile']);
     expect(JSON.parse(m.get('nuance.keys')!)).toEqual({ claude: 'k' });
+  });
+});
+
+describe('days under 800 kcal', () => {
+  // A woman of 30, 165 cm, 70 kg, burning 2,050 kcal a day; one meal logged at 1 pm each day.
+  const woman: BodyProfile = { sex: 'female', age: 30, heightCm: 165, weightKg: 70, activity: 'light' };
+  const day = (d: number) => new Date(2026, 0, 5 + d, 7).getTime();
+  const key = (d: number) => { const x = new Date(day(d)); return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}-${String(x.getDate()).padStart(2, '0')}`; };
+  const ref = referenceComposition(woman, 30);
+  function sim(eat: (d: number) => number, logged = eat, days = 60) {
+    const weights: WeighIn[] = [];
+    const meals: { at: number; totals: { kcal: number; protein: number } }[] = [];
+    let w = 70;
+    for (let d = 0; d < days; d++) {
+      weights.push({ at: day(d), kg: w + 0.3 * Math.sin(d * 1.7) });
+      meals.push({ at: day(d) + 6 * 3_600_000, totals: { kcal: logged(d), protein: 90 } });
+      w += (eat(d) - 2050 * mifflinStJeor('female', 30, 165, w) / mifflinStJeor('female', 30, 165, 70)) / energyDensity(compositionAt(ref, w).fatKg);
+    }
+    return { input: { profile: woman, goal: 'lose' as const, today: key(days - 1), weighIns: weights }, meals };
+  }
+
+  it('keeps them when they are what she eats: the weight falls to match', () => {
+    const s = sim(() => 700);
+    const ids = assessLog(s.input, s.meals).insights.map(i => i.id);
+    expect(ids).toContain('intake-below-floor');
+    expect(ids).not.toContain('need-data');
+  });
+
+  it('leaves them out when they are a few half-logged days', () => {
+    // 2,050 eaten every day; on 3 days a fortnight only a 500 kcal lunch is logged.
+    const s = sim(() => 2050, d => (d % 5 === 0 ? 500 : 2050));
+    const a = assessLog(s.input, s.meals);
+    expect(a.insights.map(i => i.id)).not.toContain('intake-below-floor');
+    // The measured burn stays at the real 2,050 instead of being pulled down by the gaps (to about 1,740).
+    expect(Math.abs(a.expenditure!.observed!.kcal - 2050)).toBeLessThan(100);
+    const raw = assess({ ...s.input, intakes: intakesFrom(s.meals, s.input.today, Infinity, 0) });
+    expect(raw.expenditure!.observed!.kcal).toBeLessThan(1850);
   });
 });

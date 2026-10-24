@@ -54,12 +54,24 @@ const STAND_IN = new Set(['imitation', 'substitute']);
 const MEATLESS = new Set(['meatless', 'vegetarian', 'vegan']);
 const MEAT = new Set(['meat', 'chicken', 'beef', 'pork', 'lamb', 'turkey', 'bacon', 'ham', 'sausage', 'frankfurter', 'dog', 'meatball', 'luncheon', 'steak', 'salami', 'burger', 'patty', 'fillet']);
 
-/** Whether a candidate is a product made from the food or a stand-in for it, which the query does
- * not ask for. */
-function otherFood(description: string, q: ReadonlySet<string>): boolean {
+/** Cooking words: raw and cooked values of a food differ by the water gained or lost. */
+const COOKED = new Set(['cooked', 'boiled', 'baked', 'fried', 'grilled', 'roasted', 'stewed', 'steamed', 'braised', 'broiled', 'toasted', 'poached']);
+
+/** Whether a candidate is another food than the query asks for: a product made from it, a stand-in
+ * for it, a compound that names a different food ("Tofu yogurt" for tofu, "French toast" for toast,
+ * "Oat bran cereal" for oats), or the raw food for a cooked one and the reverse. */
+function otherFood(description: string, q: ReadonlySet<string>, query: string): boolean {
+  const all = tokens(description);
   const lead = tokens(description.split(LEAD)[0]!);
   const meat = lead.some(t => MEAT.has(t));
-  return lead.some(t => PRODUCT.has(t) && !q.has(t)) || tokens(description).some(t => (STAND_IN.has(t) || (meat && MEATLESS.has(t))) && !q.has(t));
+  if (lead.some(t => PRODUCT.has(t) && !q.has(t)) || all.some(t => (STAND_IN.has(t) || (meat && MEATLESS.has(t))) && !q.has(t))) return true;
+  if (lead.length >= 2 && lead.some(t => q.has(t)) && lead.some(t => !q.has(t))) return true;
+  // "raw" and "cooked" are stop words for matching, so the state is read from the plain words.
+  const words = (x: string) => new Set(x.toLowerCase().split(/[^a-z]+/));
+  // FNDDS names say how a cooked food started ("roasted, from raw"); that is not its state.
+  const qw = words(query), dw = words(description.replace(/\bfrom (raw|frozen|fresh|canned|dried)\b/gi, ''));
+  const cooked = (w: Set<string>) => w.has('cooked') || [...w].some(t => COOKED.has(t));
+  return (cooked(qw) && !qw.has('raw') && dw.has('raw')) || (qw.has('raw') && !dw.has('raw') && cooked(dw));
 }
 
 /** The best candidate for an item, or null to keep the estimate. */
@@ -74,7 +86,7 @@ export function choose(query: string, estimate: Nutrients, candidates: readonly 
     if (!energyFits(c.per100.kcal, estimate.kcal)) continue;
     const overlap = nameScore(query, c.description);
     const cover = c.cover ?? Math.min(1, overlap);
-    if (cover < MIN_COVER || otherFood(c.description, q)) continue;
+    if (cover < MIN_COVER || otherFood(c.description, q, query)) continue;
     const rel = c.score !== undefined && top > 0 ? Math.max(c.score / top, overlap) : overlap;
     const off = estimate.kcal > LOW_KCAL ? Math.abs(Math.log(Math.max(c.per100.kcal, 1) / estimate.kcal)) : 0;
     const s = rel + cover - 0.5 * off - 0.02 * c.rank;

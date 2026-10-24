@@ -6,7 +6,7 @@ import { allWeighIns, deleteWeighIn, putWeighIn } from '@/core/db';
 import { dayKey } from '@/core/dates';
 import { today } from '@/core/clock';
 import { meals } from '@/slices/today/meals';
-import { assess, trendWeights, type Assessment, type BodyProfile, type DayIntake, type TrendPoint } from '@/metabolism';
+import { assess, trendWeights, type Assessment, type AssessInput, type BodyProfile, type DayIntake, type TrendPoint } from '@/metabolism';
 
 const DAY_MS = 864e5;
 
@@ -72,7 +72,9 @@ export const PARTIAL_DAY_KCAL = 800;
 /** Finished days only: today is still being logged, and a day under PARTIAL_DAY_KCAL would read as
  * a low-intake day and pull the measured maintenance down. Every earlier day is passed, because the
  * adaptation check compares windows months apart. */
-export function intakesFrom(list: readonly { at: number; totals: { kcal: number; protein: number } }[], todayKey: string, days = Infinity): DayIntake[] {
+type Logged = { at: number; totals: { kcal: number; protein: number } };
+
+export function intakesFrom(list: readonly Logged[], todayKey: string, days = Infinity, minKcal = PARTIAL_DAY_KCAL): DayIntake[] {
   const by = new Map<string, DayIntake>();
   for (const m of list) {
     const d = dayKey(m.at);
@@ -82,7 +84,7 @@ export function intakesFrom(list: readonly { at: number; totals: { kcal: number;
     cur.protein += m.totals.protein;
     by.set(d, cur);
   }
-  const done = [...by.values()].filter(d => d.kcal >= PARTIAL_DAY_KCAL).sort((a, b) => (a.day < b.day ? -1 : 1));
+  const done = [...by.values()].filter(d => d.kcal >= minKcal).sort((a, b) => (a.day < b.day ? -1 : 1));
   return Number.isFinite(days) ? done.slice(-days) : done;
 }
 
@@ -101,13 +103,25 @@ export function bodyProfile(b: Body, weights: readonly WeighIn[]): BodyProfile |
   };
 }
 
+/** Assesses with days under PARTIAL_DAY_KCAL left out. When at least half of the last 14 days are
+ * that low and the weight agrees with them (the measured burn with them kept is believable), they
+ * are what the person eats, and they are kept, so the low-intake card can show. */
+export function assessLog(input: Omit<AssessInput, 'intakes'>, list: readonly Logged[]): Assessment {
+  const done = assess({ ...input, intakes: intakesFrom(list, input.today) });
+  const all = intakesFrom(list, input.today, Infinity, 0);
+  const since = dayKey(new Date(`${input.today}T12:00:00`).getTime() - 14 * DAY_MS);
+  if (all.filter(d => d.day >= since && d.kcal < PARTIAL_DAY_KCAL).length < 7) return done;
+  const raw = assess({ ...input, intakes: all });
+  return raw.expenditure?.observed?.plausible ? raw : done;
+}
+
 export const assessment = computed<Assessment | null>(() => {
   const p = profile.value;
   if (!complete(p.body)) return null;
   const bp = bodyProfile(p.body, weighIns.value);
   if (!bp) return null;
   try {
-    return assess({ profile: bp, goal: p.goal, today: today.value, weighIns: weighIns.value, intakes: intakesFrom(meals.value, today.value), ratePctPerWeek: paceFor(p) });
+    return assessLog({ profile: bp, goal: p.goal, today: today.value, weighIns: weighIns.value, ratePctPerWeek: paceFor(p) }, meals.value);
   } catch { return null; }
 });
 
