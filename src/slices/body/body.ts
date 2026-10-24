@@ -6,7 +6,9 @@ import { allWeighIns, deleteWeighIn, putWeighIn } from '@/core/db';
 import { dayKey } from '@/core/dates';
 import { today } from '@/core/clock';
 import { meals } from '@/slices/today/meals';
-import { assess, currentTrendKg, trendWeights, type Assessment, type BodyProfile, type DayIntake } from '@/metabolism';
+import { assess, trendWeights, type Assessment, type BodyProfile, type DayIntake, type TrendPoint } from '@/metabolism';
+
+const DAY_MS = 864e5;
 
 export const weighIns = signal<WeighIn[]>([]);
 
@@ -35,9 +37,10 @@ export async function removeWeight(at: number): Promise<WeighIn | null> {
   try { await deleteWeighIn(at); return w; } catch { weighIns.value = [...weighIns.value, w].sort((a, b) => a.at - b.at); return null; }
 }
 
-/** Puts back a weigh-in removed by removeWeight. */
+/** Puts back a weigh-in removed by removeWeight, unless that day has a newer one by then. */
 export async function restoreWeight(w: WeighIn): Promise<void> {
-  weighIns.value = [...weighIns.value.filter(x => x.at !== w.at), w].sort((a, b) => a.at - b.at);
+  if (weighIns.value.some(x => dayKey(x.at) === dayKey(w.at))) return;
+  weighIns.value = [...weighIns.value, w].sort((a, b) => a.at - b.at);
   try { await putWeighIn(w); } catch { /* stays in memory for this session */ }
 }
 
@@ -55,8 +58,14 @@ export function complete(b: Partial<Body> | undefined): b is Body {
   return !!b && !!b.birthYear && b.birthYear > 1900 && !!b.heightCm && b.heightCm >= 100 && b.heightCm <= 250 && !!b.sex && !!b.activity;
 }
 
-/** Finished days only: today is still being logged and would read as a low-intake day. */
-export function intakesFrom(list: readonly { at: number; totals: { kcal: number; protein: number } }[], todayKey: string, days = 56): DayIntake[] {
+/** A logged day under this is taken as unfinished: diets below 800 kcal a day need medical supervision
+ * [Jensen 2014, docs/METABOLISM.md section 5], so such a day is far more often a half-logged one. */
+export const PARTIAL_DAY_KCAL = 800;
+
+/** Finished days only: today is still being logged, and a day under PARTIAL_DAY_KCAL would read as
+ * a low-intake day and pull the measured maintenance down. Every earlier day is passed, because the
+ * adaptation check compares windows months apart. */
+export function intakesFrom(list: readonly { at: number; totals: { kcal: number; protein: number } }[], todayKey: string, days = Infinity): DayIntake[] {
   const by = new Map<string, DayIntake>();
   for (const m of list) {
     const d = dayKey(m.at);
@@ -66,7 +75,8 @@ export function intakesFrom(list: readonly { at: number; totals: { kcal: number;
     cur.protein += m.totals.protein;
     by.set(d, cur);
   }
-  return [...by.values()].sort((a, b) => (a.day < b.day ? -1 : 1)).slice(-days);
+  const done = [...by.values()].filter(d => d.kcal >= PARTIAL_DAY_KCAL).sort((a, b) => (a.day < b.day ? -1 : 1));
+  return Number.isFinite(days) ? done.slice(-days) : done;
 }
 
 export function bodyProfile(b: Body, weights: readonly WeighIn[]): BodyProfile | null {
@@ -107,11 +117,26 @@ export const activeTargets = computed(() => {
   };
 });
 
+/** Trend change over the last week: from the trend point closest to 7 days before the latest one
+ * (5 to 10 days back), and only while the latest weigh-in is under a week old. */
+export function weekChange(points: readonly TrendPoint[], now: number): number | null {
+  const last = points.at(-1);
+  if (!last || now - last.at > 7 * DAY_MS) return null;
+  const target = last.at - 7 * DAY_MS;
+  let best: TrendPoint | null = null;
+  for (const p of points) {
+    if (p.at < last.at - 10 * DAY_MS || p.at > last.at - 5 * DAY_MS) continue;
+    if (!best || Math.abs(p.at - target) < Math.abs(best.at - target)) best = p;
+  }
+  return best ? last.trendKg - best.trendKg : null;
+}
+
 export const trend = computed(() => {
   const w = weighIns.value;
   if (!w.length) return null;
   const points = trendWeights(w);
-  const now = currentTrendKg(w);
-  const weekAgo = points.filter(pt => pt.at <= Date.now() - 7 * 864e5).at(-1);
-  return { kg: now ?? w.at(-1)!.kg, last: w.at(-1)!, points, weekChange: weekAgo && now !== null ? now - weekAgo.trendKg : null };
+  const last = points.at(-1);
+  // Recomputed when the day changes, so "this week" does not go stale overnight.
+  void today.value;
+  return { kg: last?.trendKg ?? w.at(-1)!.kg, last: w.at(-1)!, points, weekChange: weekChange(points, Date.now()) };
 });

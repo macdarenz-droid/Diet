@@ -122,7 +122,7 @@ This is the idea behind Hall and Chow's method, which recovered intake changes f
 
 **How much data.** Daily weights over more than 28 days were needed for a 95% interval narrower than 300 kcal/day [Hall & Chow 2011].
 
-**Logging bias.** People who said they could not lose weight on under 1,200 kcal under-reported intake by 47% and over-reported activity by 51% [Lichtman 1992]. Nuance's measured expenditure is in the units of the person's own log: if someone logs 20% low every day, the measured maintenance is 20% low too, and targets set against the same log still work. Logging that is complete on some days and not others cannot be corrected; the app should pass only finished days.
+**Logging bias.** People who said they could not lose weight on under 1,200 kcal under-reported intake by 47% and over-reported activity by 51% [Lichtman 1992]. Nuance's measured expenditure is in the units of the person's own log: if someone logs 20% low every day, the measured maintenance is 20% low too, and targets set against the same log still work. Logging that is complete on some days and not others cannot be corrected; the app should pass only finished days. The app (`src/slices/body/body.ts`, `intakesFrom`) passes every earlier day, never today, and leaves out days under 800 kcal: diets below that need medical supervision [Jensen 2014], so such a day is far more often a half-logged one. A person truly eating under 800 kcal a day therefore gets no low-intake insight from those days; a "day finished" marker would close that gap but is new saved data (owner approval).
 
 **Nuance's rules** (`src/metabolism/adaptive.ts`):
 
@@ -185,6 +185,8 @@ Insights are data; the UI words them. Each has `id`, `severity` (high, medium, l
 | drift | ratePctPerWeek, days | update-target (kcal) |
 | need-data | windowDays, loggedDays, weighIns, minLoggedDays, minWeighIns | log-and-weigh (days, weighInsPerWeek) |
 | trend-on-track | ratePctPerWeek, plannedPctPerWeek | keep |
+
+**How the cards word them** (`src/slices/body/words.ts`). The adaptation card states the measured gap (expected minus measured, per day) and says that after weight loss "hunger rises and muscles do the same work on less energy" [Polidori 2016; Sumithran 2011; Rosenbaum & Leibel 2010]; less daily movement [Redman 2009] is left to the steps suggestion, because Rosenbaum & Leibel put most of the non-resting shortfall on muscle efficiency. The diet-break card says breaks at maintenance "slowed the fall in resting metabolism and eased hunger" in trials [Byrne 2018; Peos 2021], not that they add fat loss. The fast-gain card says gaining more slowly limits fat gain [Iraki 2019]. An unexplained plateau says a stable weight at an intake makes that intake the maintenance (energy balance, section 6).
 
 ## 11. Limits and what could not be verified
 

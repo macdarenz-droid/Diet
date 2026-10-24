@@ -16,6 +16,7 @@ import { toast } from '@/app/toast';
 import { meals } from '@/slices/today/meals';
 import { PACE, activeTargets, assessment, logWeight, weighIns } from '@/slices/body/body';
 import { KG_MAX, KG_MIN } from '@/slices/body/WeightSheet';
+import { wordPace } from '@/slices/body/words';
 import { KeySheet, keySheet, maskKey } from './KeySheet';
 
 const GOALS: { value: Goal; label: string }[] = [
@@ -141,13 +142,18 @@ function BodySection({ i }: { i: number }) {
 function PaceSection({ i }: { i: number }) {
   const p = profile.value;
   if (p.goal !== 'lose' && p.goal !== 'muscle') return null;
-  const pct = PACE[p.goal][p.pace];
-  const kg = assessment.value?.weightKg ?? weighIns.value.at(-1)?.kg ?? null;
-  const verb = p.goal === 'lose' ? 'Lose' : 'Gain';
+  const a = assessment.value;
+  const line = wordPace({
+    goal: p.goal,
+    chosenPct: PACE[p.goal][p.pace],
+    plannedPct: activeTargets.value.auto && a ? a.targets.ratePctPerWeek : null,
+    excluded: !!a?.exclusion,
+    weightKg: a?.weightKg ?? weighIns.value.at(-1)?.kg ?? null,
+  });
   return (
     <Section title="Pace" i={i}>
       <Segmented<Pace> label="Pace" value={p.pace} options={PACES} onChange={pace => set({ pace })} />
-      <div class="mono pace-rate num">{verb} {kg ? `${fmt(Math.max(0.1, Math.round(pct * kg / 10) / 10))} kg` : `${fmt(pct)}%`} a week</div>
+      {line && <div class="mono pace-rate num">{line}</div>}
     </Section>
   );
 }

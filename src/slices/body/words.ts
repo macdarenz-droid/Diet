@@ -80,10 +80,10 @@ export function word(i: Insight, c: WordContext): Worded {
     case 'rate-too-fast':
       return out('Fast loss', `You are losing ${w.rate(i.numbers.ratePctPerWeek)}, more than ${fmt(i.numbers.maxPctPerWeek)}% of your weight. Slower loss keeps more muscle.`);
     case 'gain-too-fast':
-      return out('Fast gain', `You are gaining ${w.rate(i.numbers.ratePctPerWeek)}, more than ${fmt(i.numbers.maxPctPerWeek)}% of your weight. Faster gain adds fat, not muscle.`);
+      return out('Fast gain', `You are gaining ${w.rate(i.numbers.ratePctPerWeek)}, more than ${fmt(i.numbers.maxPctPerWeek)}% of your weight. Gaining more slowly limits fat gain.`);
     case 'adaptation': {
       const n = i.numbers;
-      return out('Metabolic adaptation', `You have lost ${fmt(n.lossPct)}% of your weight, and your body now burns ${w.perDay(n.observedKcal)}: ${w.e(n.gapKcal)} less than your new weight accounts for. After a large loss the body defends its fat stores: hunger rises, everyday movement drops and muscles do the same work on less energy.`);
+      return out('Metabolic adaptation', `You have lost ${fmt(n.lossPct)}% of your weight, and your body now burns ${w.perDay(n.gapKcal)} less than your new weight accounts for. After weight loss the body defends its fat stores: hunger rises and muscles do the same work on less energy.`);
     }
     case 'plateau': {
       const n = i.numbers;
@@ -92,13 +92,13 @@ export function word(i: Insight, c: WordContext): Worded {
         i.cause === 'logging-gaps' ? `${held}, with fewer than 6 in 10 of those days logged.`
         : i.cause === 'intake-rise' ? `${held}. You averaged ${w.perDay(n.meanIntakeKcal)}, up ${w.e(n.meanIntakeKcal - n.previousMeanIntakeKcal)} on the ${w.weeks(n.days)} before.`
         : i.cause === 'adaptation' ? `${held}, and your body is burning less than your weight accounts for.`
-        : `${held} at ${w.perDay(n.meanIntakeKcal)}, so your maintenance is lower than your details suggest.`;
+        : `${held} at ${w.perDay(n.meanIntakeKcal)}, which makes that your maintenance now.`;
       return out('Plateau', body);
     }
     case 'diet-break': {
       const n = i.numbers;
       const lead = i.trigger === 'milestone' ? `You have lost ${fmt(n.lossPct)}% of your weight.` : `You have been losing for ${w.weeks(n.weeksLosing * 7)}.`;
-      return out('Diet break', `${lead} In trials, two weeks at maintenance between blocks of dieting kept more weight off.`);
+      return out('Diet break', `${lead} In trials, breaks at maintenance slowed the fall in resting metabolism and eased hunger.`);
     }
     case 'protein-low':
       return out('Low protein', `You averaged ${fmt(i.numbers.averageG)} g a day over ${w.days(i.numbers.days)}, against a target of ${fmt(i.numbers.targetG)} g.`);
@@ -126,4 +126,14 @@ export function word(i: Insight, c: WordContext): Worded {
       return out('On track', `You are ${n.ratePctPerWeek < 0 ? 'losing' : 'gaining'} ${w.rate(n.ratePctPerWeek)}, as planned.`, 'good');
     }
   }
+}
+
+/** The line under Pace: the engine's planned rate when it sets the targets, else the chosen pace.
+ * Null when the engine sets no target for this person. */
+export function wordPace(o: { goal: 'lose' | 'muscle'; chosenPct: number; plannedPct: number | null; excluded: boolean; weightKg: number | null }): string | null {
+  if (o.excluded) return null;
+  const pct = o.plannedPct ?? (o.goal === 'lose' ? -o.chosenPct : o.chosenPct);
+  const kg = o.weightKg ? Math.round(Math.abs(pct) * o.weightKg / 10) / 10 : null;
+  if (pct === 0 || kg === 0) return 'Hold weight';
+  return `${pct < 0 ? 'Lose' : 'Gain'} ${kg !== null ? `${fmt(kg)} kg` : `${fmt(r1(Math.abs(pct)))}%`} a week`;
 }

@@ -32,6 +32,14 @@ function objects(n: Node, out: Node[] = []): Node[] {
   return out;
 }
 
+describe('prompt', () => {
+  it('asks for a table search name, allowing common local names but no brands', () => {
+    expect(SYSTEM).toMatch(/usda_query is the name to look the item up by in a food-composition table/);
+    expect(SYSTEM).toContain('"pandesal"');
+    expect(SYSTEM).toMatch(/No brands\./);
+  });
+});
+
 describe('schema', () => {
   it('is strict: every object closes additional properties and requires every key', () => {
     const all = objects(SCHEMA as Node);

@@ -46,6 +46,21 @@ function guessRegion(): Region {
   return 'AU';
 }
 
+/** Removes what earlier builds saved and nothing reads any more: the USDA key and its lookup cache
+ * (food data is bundled since 2026-10-24). */
+export function purgeLegacy(storage: Storage): void {
+  try {
+    const old: string[] = [];
+    for (let i = 0; i < storage.length; i++) { const k = storage.key(i); if (k?.startsWith('nuance.fdc.')) old.push(k); }
+    for (const k of old) storage.removeItem(k);
+    const raw = storage.getItem(KEYS.keys);
+    const v = raw ? JSON.parse(raw) as Record<string, unknown> : null;
+    if (v && typeof v === 'object' && 'usda' in v) storage.setItem(KEYS.keys, JSON.stringify({ claude: typeof v.claude === 'string' ? v.claude : '' }));
+  } catch { /* storage blocked or unreadable */ }
+}
+
+if (typeof localStorage !== 'undefined') purgeLegacy(localStorage);
+
 const base = defaultProfile(guessRegion());
 const storedProfile = typeof localStorage === 'undefined' ? base : read<Profile>(KEYS.profile, base);
 export const profile = persisted<Profile>(KEYS.profile, { ...storedProfile, targets: { ...DEFAULT_TARGETS, ...storedProfile.targets } });
