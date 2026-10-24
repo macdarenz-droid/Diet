@@ -108,15 +108,14 @@ Node 22 built-ins and the system `unzip` (Info-ZIP) for the zip archives and the
 - **Search speed on a phone** was not measured. In this container, parsing the three files takes 20 to 30 ms, building the index 100 to 190 ms, a search 1 to 15 ms, and the first query with a word found only written together (such as "pandesal") about 115 ms once.
 - **Matching through `choose()`.** `searchLocal` finds "pandesal" (through FNDDS's "Pan de sal") and ranks "Adobo, with rice" first for "chicken adobo", but `ground.ts` `choose()` compares only the description's words, unweighted: it rejects the pandesal roll (no word "pandesal" in the description) and, for "chicken adobo" at 180 to 200 kcal, picks "Chicken feet" over the adobo dishes because "chicken" is the description's first word. See section 8; until then such items keep Claude's estimate or get a poor match.
 
-## 8. Integration (not yet wired)
+## 8. Integration
 
-The tables and `searchLocal` are built and tested but nothing in the app calls them yet. The remaining steps, each for the card that owns the file:
+Wired on 2026-10-24:
 
-1. `src/nutrition/lookup.ts`: search `searchLocal(query, 10)` for every distinct query, with or without a USDA key, and add live USDA results when a key is set; status `no-key` then no longer means "no grounding". Warm the index when the scan sheet opens, so it is built while Claude works.
-2. `src/nutrition/ground.ts` `applyCandidate`: use `withEstimate(candidate, item.estimate)` for local candidates so a nutrient the source does not report keeps Claude's value instead of 0 (USDA's `parseFood` has the same `?? 0` gap).
-3. `src/nutrition/fdc.ts` `parseFood` uses "Carbohydrate, by difference" (1005) as `carbs`, which includes fibre, while the prompt and these tables use available carbohydrate; subtract 1079 there too, or live and local values disagree by the fibre content.
-4. `choose()`: compare the query against the candidate's alias as well as its description, also with spaces removed ("pandesal" against "Pan de sal"), and weight words by rarity (or use `LocalCandidate.score`), so "adobo" outweighs "chicken".
-5. Saved data (`src/core/models.ts`, owner approval): `Source` has only `label`, `usda` and `estimate`, and `Item.usda` keeps the FDC id and description. AFCD and CoFID matches need a source value or a field naming the table, and the result screen a matching label.
-6. Attribution in the app: OGL v3.0 asks for the source to be acknowledged "in your product or application" and the FSANZ licence for attribution "in a manner reasonable to the medium"; a sources line (for example in Profile) naming USDA FoodData Central, FSANZ AFCD Release 3 and CoFID 2021, with links, meets both.
-7. `vite.config.ts`: to work offline from the first scan, add the `FOOD_FILES` names to the service worker's precache list (about 490 KB gzipped); without that they are cached the first time they are fetched. The content hash in each name changes the service worker version whenever the data changes.
-8. `docs/ARCHITECTURE.md` sections 5 and 7: describe the offline tables (no new network host: the files are same-origin).
+1. `src/nutrition/lookup.ts` searches `searchLocal(query, 12)` once for every distinct name, at most 24 a scan; there is no live USDA lookup and no USDA key any more.
+2. `src/nutrition/ground.ts` `applyCandidate` fills a nutrient the table does not report from Claude's value.
+3. `choose()` uses the search score (`Candidate.score`), which counts aliases and words written together, so "pandesal" and "chicken adobo" match (tests in `tests/ground.test.ts` run on the shipped tables).
+4. Saved data: `Source` is `label`, `database` or `estimate`, and `Item.food` keeps the food's id, description and table.
+5. Attribution: Profile > Food data names the FSANZ AFCD Release 3 (with its licence, the changes and no endorsement) and carries the OGL v3.0 statement for CoFID. USDA data is CC0 and is not named on screen (owner, 2026-10-24); it is credited in `THIRD_PARTY_NOTICES.md`.
+6. The service worker precaches the three files; `scripts/verify-dist.mjs` fails the build if one is missing.
+7. `docs/ARCHITECTURE.md` sections 2, 5 and 7 describe the tables.

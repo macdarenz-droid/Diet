@@ -1,5 +1,5 @@
 // Renders every screen at phone size (390 × 844, 2x) into screenshots/, end to end against the
-// production build, with Claude and USDA mocked at the network layer. Fails on any console error,
+// production build, with Claude mocked at the network layer. Fails on any console error,
 // page error or blocked request (a Content-Security-Policy violation shows up here).
 //
 //   npm run build && npm run screens [-- path/to/food-photo.jpg]
@@ -53,19 +53,6 @@ const ANALYSIS = {
   ],
 };
 
-// Mock USDA entries: one per query that should match; everything else returns no foods.
-const food = (fdcId, description, kcal, p, c, f, sat, fib, sug, na) => ({ fdcId, description, dataType: 'Survey (FNDDS)', foodNutrients: [
-  { nutrientId: 1008, value: kcal, unitName: 'KCAL' }, { nutrientId: 1003, value: p, unitName: 'G' }, { nutrientId: 1005, value: c, unitName: 'G' },
-  { nutrientId: 1004, value: f, unitName: 'G' }, { nutrientId: 1258, value: sat, unitName: 'G' }, { nutrientId: 1079, value: fib, unitName: 'G' },
-  { nutrientId: 2000, value: sug, unitName: 'G' }, { nutrientId: 1093, value: na, unitName: 'MG' },
-] });
-const USDA = {
-  'chicken thigh, stewed, with skin': [food(900001, 'Chicken thigh, stewed, skin eaten', 228, 23.3, 0, 14.6, 4, 0, 0, 86)],
-  'chicken thigh, stewed, meat only': [food(900002, 'Chicken thigh, stewed, skin not eaten', 178, 25.8, 0, 7.8, 2.1, 0, 0, 83)],
-  'chicken breast, stewed, meat only': [food(900003, 'Chicken breast, stewed, skin not eaten', 151, 28.9, 0, 3.0, 0.9, 0, 0, 69)],
-  'yardlong beans, cooked': [food(900004, 'Yardlong beans, cooked', 47, 2.5, 9.2, 0.1, 0, 3, 1, 4)],
-};
-
 function sse(json) {
   const ev = (type, data) => `event: ${type}\ndata: ${JSON.stringify({ type, ...data })}\n\n`;
   const text = JSON.stringify(json);
@@ -105,7 +92,7 @@ async function run(theme, region) {
   await ctx.addInitScript(([theme, region]) => {
     if (sessionStorage.getItem('seeded')) return;
     sessionStorage.setItem('seeded', '1');
-    localStorage.setItem('nuance.keys', JSON.stringify({ claude: 'mock-claude-key', usda: 'mock-usda-key' }));
+    localStorage.setItem('nuance.keys', JSON.stringify({ claude: 'mock-claude-key' }));
     localStorage.setItem('nuance.prefs', JSON.stringify({ theme, reduceMotion: false }));
     localStorage.setItem('nuance.profile', JSON.stringify({ goal: 'lose', diet: 'any', avoid: '', region, unit: region === 'AU' ? 'kJ' : 'kcal', targets: { energy: 2000, protein: 100, fibre: 30, sugars: 50, sodium: 2000 } }));
   }, [theme, region]);
@@ -120,10 +107,6 @@ async function run(theme, region) {
     if (route.request().method() === 'OPTIONS') return route.fulfill({ status: 204, headers: { 'access-control-allow-origin': '*', 'access-control-allow-headers': '*', 'access-control-allow-methods': 'POST' } });
     await held;
     await route.fulfill({ status: 200, headers: { 'content-type': 'text/event-stream', 'access-control-allow-origin': '*' }, body: sse(ANALYSIS) });
-  });
-  await page.route('https://api.nal.usda.gov/**', route => {
-    const q = new URL(route.request().url()).searchParams.get('query') ?? '';
-    route.fulfill({ status: 200, headers: { 'content-type': 'application/json', 'access-control-allow-origin': '*' }, body: JSON.stringify({ foods: USDA[q] ?? [] }) });
   });
 
   const snap = async (name, opts = {}) => {
@@ -205,6 +188,48 @@ async function run(theme, region) {
   await page.waitForSelector('.profile');
   await snap('profile');
   await snap('profile-full', { full: true, wait: 200 });
+
+  // Body details through the form, then ten weeks of history in the log for the trend and insights.
+  await page.click('.seg button:has-text("Male")');
+  for (const [label, v] of [['Birth year', '1986'], ['Height', '180'], ['Weight', '100']]) {
+    await page.fill(`input[aria-label="${label}"]`, v);
+    await page.locator(`input[aria-label="${label}"]`).blur();
+  }
+  await page.click('.choice:has-text("Lightly active")');
+  await page.locator('.section:has(h2:text-is("Targets"))').scrollIntoViewIfNeeded();
+  await snap('profile-targets');
+  if (!(await page.locator('[aria-label="Automatic targets"]').count())) problems.push(`[${theme}] automatic targets did not appear`);
+  await page.evaluate(() => new Promise((resolve, reject) => {
+    const req = indexedDB.open('nuance', 2);
+    req.onerror = () => reject(req.error);
+    req.onsuccess = () => {
+      const db = req.result;
+      const t = db.transaction(['weighins', 'meals'], 'readwrite');
+      const nut = kcal => ({ kcal, protein: 90, carbs: 220, fat: 70, satFat: 22, fibre: 24, sugars: 60, sodium: 2100 });
+      for (let d = 70; d >= 1; d--) {
+        const day = new Date(); day.setHours(7, 0, 0, 0); day.setDate(day.getDate() - d);
+        t.objectStore('weighins').put({ at: day.getTime(), kg: Math.round((100 - 0.11 * (70 - d) + 0.4 * Math.sin(d * 1.7)) * 10) / 10 });
+        day.setHours(13);
+        t.objectStore('meals').put({ id: `seed-${d}`, at: day.getTime(), dish: 'Logged day', items: [], totals: nut(2000) });
+      }
+      t.oncomplete = () => { db.close(); resolve(); };
+      t.onerror = () => reject(t.error);
+    };
+  }));
+  await page.reload();
+  await page.waitForSelector('.today .weigh-card');
+  await page.locator('.progress').scrollIntoViewIfNeeded();
+  await snap('today-progress', { wait: 1400 });
+  await snap('today-progress-full', { full: true, wait: 200 });
+  const spark = await page.locator('.spark').boundingBox();
+  if (spark) { await page.mouse.move(spark.x + spark.width * 0.4, spark.y + spark.height / 2); await snap('progress-scrub', { wait: 300 }); }
+  else problems.push(`[${theme}] no weight trend`);
+  const more = page.locator('.insight[aria-expanded]').first();
+  if (await more.count()) { await more.click(); await snap('insight-open', { wait: 500 }); }
+  await page.click('.weigh-card .btn:has-text("Log weight")');
+  await page.waitForSelector('.sheet.open .weight-form');
+  await snap('weight-sheet', { wait: 700 });
+  await page.keyboard.press('Escape');
   await ctx.close();
 }
 

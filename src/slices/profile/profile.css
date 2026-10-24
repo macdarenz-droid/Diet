@@ -14,3 +14,10 @@
 .key-link svg { width: 14px; height: 14px; transition: transform var(--d-base) var(--e-standard); }
 @media (hover: hover) and (pointer: fine) { .key-link:hover { color: var(--ink); border-color: var(--ink-2); } .key-link:hover svg { transform: translateX(2px); } }
 .key-actions { margin-top: 4px; }
+.value-end { font-size: 15px; font-weight: 550; color: var(--ink); padding-right: 4px; }
+/* Body details */
+.body-row .input-wrap { width: 132px; flex: none; }
+.body-row .input { height: 40px; text-align: right; padding-right: 44px; font-size: 16px; }
+.pace-rate { margin-top: 8px; }
+.food-data p { margin: 0; font-size: 13.5px; line-height: 1.55; color: var(--ink-2); }
+.food-data a { color: var(--ink); text-decoration: underline; text-decoration-color: var(--line-strong); text-underline-offset: 3px; }

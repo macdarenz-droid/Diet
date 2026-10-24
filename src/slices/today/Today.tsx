@@ -16,11 +16,13 @@ import { toast } from '@/app/toast';
 import { openScan } from '@/app/scan';
 import { logMeal, removeMeal, todays, todayTotals, loaded } from './meals';
 import { MealSheet } from './MealSheet';
+import { activeTargets } from '@/slices/body/body';
+import { Progress } from '@/slices/body/Progress';
 
 function Summary() {
   const p = profile.value;
   const t = todayTotals.value;
-  const target = p.targets.energy;
+  const target = activeTargets.value.energy;
   const ratio = target > 0 ? t.kcal / target : 0;
   const left = target - t.kcal;
   return (
@@ -49,8 +51,9 @@ function Summary() {
 function Meters() {
   const p = profile.value;
   const t = todayTotals.value;
+  const protein = activeTargets.value.protein;
   const rows = [
-    p.targets.protein > 0 ? { k: 'protein' as const, target: p.targets.protein } : null,
+    protein > 0 ? { k: 'protein' as const, target: protein } : null,
     { k: 'fibre' as const, target: p.targets.fibre },
     { k: 'sugars' as const, target: p.targets.sugars },
     { k: 'sodium' as const, target: p.targets.sodium },
@@ -150,7 +153,8 @@ export function Today() {
           <div class="meal-list">{list.map((m, i) => <MealRow key={m.id} m={m} i={i} onOpen={() => setOpen(m)} />)}</div>
         )}
       </Section>
-      <Section title="Targets" i={3}><Meters /></Section>
+      <Section title="Progress" i={3}><Progress /></Section>
+      <Section title="Targets" i={4}><Meters /></Section>
       {open && <MealSheet meal={open} onClose={() => setOpen(null)} />}
     </div>
   );

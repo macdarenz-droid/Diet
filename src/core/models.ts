@@ -123,7 +123,8 @@ export interface Profile {
   region: Region;
   unit: EnergyUnit;
   targets: Targets;
-  body?: Body;
+  /** Filled in field by field; the engine runs once it is complete (see slices/body). */
+  body?: Partial<Body>;
   /** Energy and protein targets come from the metabolism engine when the body details are complete. */
   autoTargets: boolean;
   pace: Pace;

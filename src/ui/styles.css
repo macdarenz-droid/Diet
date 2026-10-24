@@ -55,6 +55,8 @@
   --fat: #199e70;
   --good: #0ca30c;
   --critical: #d03b3b;
+  /* Status, the same in both themes (dataviz reference palette); always paired with a label. */
+  --warning: #fab219;
   --track: rgb(255 255 255 / .06);
 }
 

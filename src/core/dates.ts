@@ -28,6 +28,13 @@ export function fmtDay(ms: number): string {
   return dayFmt.format(new Date(ms));
 }
 
+const shortFmt = new Intl.DateTimeFormat('en-AU', { day: 'numeric', month: 'short' });
+
+/** "24 Oct". */
+export function fmtShortDay(ms: number): string {
+  return shortFmt.format(new Date(ms));
+}
+
 export function fmtTime(ms: number): string {
   return timeFmt.format(new Date(ms)).replace(/\s?(am|pm)$/i, (_, ap: string) => ` ${ap.toLowerCase()}`);
 }

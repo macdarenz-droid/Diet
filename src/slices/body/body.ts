@@ -27,6 +27,20 @@ export async function logWeight(kg: number, at = Date.now()): Promise<boolean> {
   } catch { return false; }
 }
 
+/** Deletes one weigh-in and returns it for Undo, or null when it could not be deleted. */
+export async function removeWeight(at: number): Promise<WeighIn | null> {
+  const w = weighIns.value.find(x => x.at === at);
+  if (!w) return null;
+  weighIns.value = weighIns.value.filter(x => x.at !== at);
+  try { await deleteWeighIn(at); return w; } catch { weighIns.value = [...weighIns.value, w].sort((a, b) => a.at - b.at); return null; }
+}
+
+/** Puts back a weigh-in removed by removeWeight. */
+export async function restoreWeight(w: WeighIn): Promise<void> {
+  weighIns.value = [...weighIns.value.filter(x => x.at !== w.at), w].sort((a, b) => a.at - b.at);
+  try { await putWeighIn(w); } catch { /* stays in memory for this session */ }
+}
+
 /** Per-week pace by goal, as a positive % of body weight (the engine caps both). */
 export const PACE: Record<'lose' | 'muscle', Record<Pace, number>> = {
   lose: { gentle: 0.25, steady: 0.5, fast: 1.0 },
@@ -37,8 +51,8 @@ export function paceFor(p: Pick<Profile, 'goal' | 'pace'>): number | undefined {
   return p.goal === 'lose' || p.goal === 'muscle' ? PACE[p.goal][p.pace] : undefined;
 }
 
-export function complete(b: Body | undefined): b is Body {
-  return !!b && b.birthYear > 1900 && b.heightCm >= 100 && b.heightCm <= 250 && !!b.sex && !!b.activity;
+export function complete(b: Partial<Body> | undefined): b is Body {
+  return !!b && !!b.birthYear && b.birthYear > 1900 && !!b.heightCm && b.heightCm >= 100 && b.heightCm <= 250 && !!b.sex && !!b.activity;
 }
 
 /** Finished days only: today is still being logged and would read as a low-intake day. */

@@ -29,7 +29,9 @@ Data colours (validated with the dataviz palette checker on both surfaces, all p
 | Carbs | `#d95926` | `#eb6834` |
 | Fat | `#199e70` | `#1baf7a` |
 
-Day fat sits below 3:1 against the surface, so every macro mark carries a visible label and value. Status colours (`good #0ca30c`, `critical #d03b3b`) are used only for swap differences and always with an arrow and the signed value, never colour alone. Text never takes a series colour.
+Day fat sits below 3:1 against the surface, so every macro mark carries a visible label and value. Status colours (`good #0ca30c`, `warning #fab219`, `critical #d03b3b`, the same in both themes) are used only for swap differences, over-target meters and the dot beside an insight's title, always next to a label, arrow or value, never colour alone. Text never takes a series colour.
+
+The weight trend on Today is a single 2 px ink line (no legend: the label names it) over faint raw weigh-ins, drawn at the element's pixel width so dots stay round. It draws in from the left on entry; scrubbing it shows that day's trend weight in the card's label.
 
 ## Type
 
@@ -79,7 +81,9 @@ Constants and the pointer tracker come from M/ARC's `src/ui/gesture.ts` (slop 8 
 - Meals in Today swipe left to reveal Delete; past half the width deletes, with Undo in a toast.
 - Swaps scroll sideways with snap points; the centred card is full size, its neighbours recede.
 - Toasts swipe away.
+- The weight trend scrubs with a finger or the pointer (horizontal; vertical scrolling still works).
+- Insight cards with further steps open and close on tap, the steps sliding open under the action.
 
 ## Copy
 
-Rules in AGENTS.md ("UI copy", "No AI wording"). Headings are one to three words. Buttons are verbs: "Take photo", "Describe", "Log meal", "Use swap". Progress lines name the actual step: "Reading photo", "Weighing portions", "Building swaps", "Matching foods". The screens never hedge or name data sources (owner, 2026-10-24: approximation is understood): no "estimate", "approximately", "likely", "confidence", ranges or "USDA". Sources and ranges stay in the data. `tests/copy.test.ts` enforces this.
+Rules in AGENTS.md ("UI copy", "No AI wording"). Headings are one to three words. Buttons are verbs: "Take photo", "Describe", "Log meal", "Use swap". Progress lines name the actual step: "Reading photo", "Weighing portions", "Building swaps", "Matching foods". The screens never hedge or name data sources (owner, 2026-10-24: approximation is understood): no "estimate", "approximately", "likely", "confidence", ranges or "USDA". Sources and ranges stay in the data. `tests/copy.test.ts` enforces this for the screens and `tests/body.test.ts` for every insight's wording. Insight titles are one to three words ("Metabolic adaptation", "Low protein", "On track"); the text under them gives the person's own numbers and one action. The only place a data source is named is the Food data sheet in Profile, which the AFCD and CoFID licences require.

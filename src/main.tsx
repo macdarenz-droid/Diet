@@ -10,6 +10,7 @@ import { initClock } from './core/clock';
 import { initViewport } from './app/viewport';
 import { prefs } from './core/store';
 import { loadMeals } from './slices/today/meals';
+import { loadWeighIns } from './slices/body/body';
 import { persistStorage } from './core/db';
 import { toast } from './app/toast';
 
@@ -25,6 +26,7 @@ initRouter();
 initClock();
 initViewport();
 void loadMeals();
+void loadWeighIns();
 persistStorage();
 render(<App />, document.getElementById('app')!);
 

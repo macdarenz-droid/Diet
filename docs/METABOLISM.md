@@ -195,7 +195,7 @@ Insights are data; the UI words them. Each has `id`, `severity` (high, medium, l
 - No verified kcal-per-step figure.
 - Muscle gain: tissue energy alone gives a surplus of about 5% for 0.25%/week; a narrative review recommends 10% to 20% [Iraki 2019]. Extra non-exercise movement when overfed [Levine 1999] would explain part of the gap. Nuance starts from tissue energy and lets the measured maintenance correct it.
 - The adaptation and plateau rules were tested on simulated people whose expenditure follows the resting equation; real bodies are noisier, so the field rates of detection will differ.
-- The engine takes sex, age or birth year, height, weight, body fat, activity, pregnancy and breastfeeding as inputs. The saved profile (`src/core/models.ts`) does not hold them yet; storing them is a new kind of saved data and needs the owner's approval first (AGENTS.md).
+- The engine takes sex, age or birth year, height, weight, body fat, activity, pregnancy and breastfeeding as inputs. The profile holds them, with weigh-ins in IndexedDB (owner approval, 2026-10-24); the app passes only finished logged days.
 
 ## Sources
 

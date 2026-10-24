@@ -16,14 +16,9 @@ npm run test:tz      # tests in Sydney and Manila time
 npm run screens -- path/to/food.jpg   # every screen at phone size into screenshots/ (after a build)
 ```
 
-## Keys
+## Key
 
-Each person adds their own keys in Profile. They are stored only in that browser.
-
-- Claude API key: https://platform.claude.com/settings/keys
-- USDA FoodData Central key (free): https://fdc.nal.usda.gov/api-key-signup/
-
-Without a USDA key the app still works; values are then Claude's estimates and are labelled "Estimate".
+Each person adds their own Claude API key in Profile (https://platform.claude.com/settings/keys). It is stored only on that device. Food data is bundled with the app, so no other key is needed.
 
 ## Host
 
