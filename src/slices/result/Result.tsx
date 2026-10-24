@@ -2,8 +2,7 @@ import type { JSX } from 'preact';
 import { useEffect, useState } from 'preact/hooks';
 import { profile } from '@/core/store';
 import { fmtEnergy } from '@/core/units';
-import { range, totals } from '@/nutrition/math';
-import type { GroundStatus } from '@/nutrition/lookup';
+import { totals } from '@/nutrition/math';
 import { Button, Card, Section } from '@/ui/primitives';
 import { Back, Check, Pen, Refresh } from '@/ui/icons';
 import { confirm as hapticConfirm, tap } from '@/ui/haptics';
@@ -17,14 +16,6 @@ import { ItemSheet } from './ItemSheet';
 import { Swaps } from './Swaps';
 
 const KIND = { meal: 'Meal', snack: 'Snack', drink: 'Drink', packaged: 'Packaged' } as const;
-const CONF = { high: 'High confidence', medium: 'Medium confidence', low: 'Low confidence' } as const;
-
-const GROUND: Partial<Record<GroundStatus, string>> = {
-  'no-key': 'Estimates only. Add a USDA key in Profile.',
-  rate: 'USDA limit reached. Some values are estimates.',
-  auth: 'USDA key not accepted. Values are estimates.',
-  offline: 'USDA unreachable. Values are estimates.',
-};
 
 function Questions() {
   const s = scan.value!;
@@ -61,10 +52,8 @@ export function Result() {
   if (!s || !c) return <div class="screen bare" />;
 
   const a = c.analysis;
-  const r = range(a.items);
   const chosen = s.selected ? c.swaps.find(w => w.id === s.selected) : undefined;
   const logged = chosen ? totals(chosen.items) : c.meal;
-  const groundNote = s.ground ? GROUND[s.ground] : undefined;
 
   const log = async () => {
     const meal = toMeal(s);
@@ -103,12 +92,11 @@ export function Result() {
         <h1>{a.dish}</h1>
         <div class="row result-chips">
           <span class="chip mono">{KIND[a.kind]}</span>
-          <span class="chip"><span class={`dot conf-${a.confidence}`} />{CONF[a.confidence]}</span>
         </div>
       </header>
 
       <Card class="result-card rise" style={{ '--i': 2 } as JSX.CSSProperties}>
-        <Breakdown n={c.meal} low={r.low} high={r.high} unit={p.unit} />
+        <Breakdown n={c.meal} unit={p.unit} />
         {a.note && <p class="note">{a.note}</p>}
       </Card>
 
@@ -116,7 +104,6 @@ export function Result() {
 
       <Section title="Items" i={3} end={<span class="mono num">{a.items.length}</span>}>
         <ItemList items={a.items} unit={p.unit} onEdit={setEdit} />
-        {groundNote && <p class="ground-note faint">{groundNote}</p>}
       </Section>
 
       {c.swaps.length > 0 && (

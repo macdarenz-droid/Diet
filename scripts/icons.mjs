@@ -1,15 +1,18 @@
 // Renders the PWA icons from one SVG with the preinstalled Chromium (Playwright).
 import { createRequire } from 'node:module';
-import { writeFileSync } from 'node:fs';
+import { mkdirSync, writeFileSync } from 'node:fs';
 
 // Playwright is preinstalled outside this project (never npm-installed here: another version would
 // not find the bundled Chromium), so it is loaded through require's global lookup.
 const { chromium } = createRequire(import.meta.url)('playwright');
 
+// The Nuance mark: an N whose diagonal fades, a shade between two solid strokes.
 const mark = (scale) => `
-  <g transform="translate(256 256) scale(${scale}) translate(-16 -16)">
-    <path d="M9 20.5c0-5 3.3-9.5 8.2-10.6.9-.2 1.7.6 1.5 1.5C17.6 16.3 13.6 20 9 20.5Z" fill="#f7f8f8"/>
-    <path d="M14 23c4.6-.4 8.5-3.4 9.6-7.8" stroke="#f7f8f8" stroke-width="1.8" stroke-linecap="round" fill="none"/>
+  <defs><linearGradient id="nd" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f7f8f8"/><stop offset="1" stop-color="#f7f8f8" stop-opacity=".22"/></linearGradient></defs>
+  <g transform="translate(256 256) scale(${scale}) translate(-16 -16)" fill="none" stroke-linecap="round">
+    <path d="M10 9.5v13" stroke="#f7f8f8" stroke-width="3.2"/>
+    <path d="M22 9.5v13" stroke="#f7f8f8" stroke-width="3.2"/>
+    <path d="M10.4 10.2 21.6 21.8" stroke="url(#nd)" stroke-width="3.2"/>
   </g>`;
 
 const svg = (rounded, scale) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
@@ -22,11 +25,22 @@ const svg = (rounded, scale) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox
 </svg>`;
 
 const out = [
-  ['public/icon-192.png', 192, svg(true, 11)],
-  ['public/icon-512.png', 512, svg(true, 11)],
-  ['public/icon-maskable-512.png', 512, svg(false, 8.5)],
-  ['public/apple-touch-icon.png', 180, svg(false, 10)],
+  ['public/icon-192.png', 192, svg(true, 9.5)],
+  ['public/icon-512.png', 512, svg(true, 9.5)],
+  ['public/icon-maskable-512.png', 512, svg(false, 7.4)],
+  ['public/apple-touch-icon.png', 180, svg(false, 8.6)],
 ];
+
+// Android launcher icons (adaptive, API 26+): a transparent foreground whose mark sits inside the
+// 66 dp safe zone of the 108 dp canvas, on the #08090a background colour set by scripts/android.sh.
+const fg = (size) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="${size}" height="${size}">${mark(6.6)}</svg>`;
+const DENSITIES = { mdpi: 1, hdpi: 1.5, xhdpi: 2, xxhdpi: 3, xxxhdpi: 4 };
+for (const [d, k] of Object.entries(DENSITIES)) {
+  mkdirSync(`native/res/mipmap-${d}`, { recursive: true });
+  out.push([`native/res/mipmap-${d}/ic_launcher_foreground.png`, Math.round(108 * k), fg(Math.round(108 * k))]);
+  out.push([`native/res/mipmap-${d}/ic_launcher.png`, Math.round(48 * k), svg(true, 9.5)]);
+  out.push([`native/res/mipmap-${d}/ic_launcher_round.png`, Math.round(48 * k), svg(true, 9.5).replace(/rx="11[02](\.5)?"/g, 'rx="256"')]);
+}
 
 const browser = await chromium.launch();
 const page = await browser.newPage({ deviceScaleFactor: 1 });

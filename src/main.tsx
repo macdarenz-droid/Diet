@@ -22,7 +22,10 @@ initRouter();
 void loadMeals();
 render(<App />, document.getElementById('app')!);
 
-if ('serviceWorker' in navigator && import.meta.env.PROD) {
+// The Android app ships its files inside the APK, so only the web build needs the service worker.
+const isNative = !!(window as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor?.isNativePlatform?.();
+
+if ('serviceWorker' in navigator && import.meta.env.PROD && !isNative) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('./sw.js').then(reg => {
       const offer = (w: ServiceWorker) => toast('Update ready', { ms: 10000, action: { label: 'Reload', run: () => { w.postMessage('skip-waiting'); } } });

@@ -11,7 +11,7 @@ export const keySheet = signal<Which | null>(null);
 
 const COPY: Record<Which, { title: string; placeholder: string; link: string }> = {
   claude: { title: 'Claude key', placeholder: 'sk-ant-…', link: 'Get a Claude key' },
-  usda: { title: 'USDA key', placeholder: 'FoodData Central key', link: 'Get a USDA key' },
+  usda: { title: 'Food database key', placeholder: 'API key', link: 'Get a key' },
 };
 
 export function maskKey(k: string): string {

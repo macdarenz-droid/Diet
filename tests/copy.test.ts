@@ -32,7 +32,8 @@ const BANNED = [
 function visible(src: string): string[] {
   const out: string[] = [];
   for (const m of src.matchAll(/>([^<>{}]*[A-Za-z][^<>{}]*)</g)) out.push(m[1]!.trim());
-  for (const m of src.matchAll(/(['"`])((?:(?!\1)[^\\\n]|\\.)*[A-Za-z]+ [A-Za-z][^'"`\n]*?)\1/g)) out.push(m[2]!);
+  // Quoted literals; markup and code characters are excluded so a match never spans two attributes.
+  for (const m of src.matchAll(/(['"`])((?:(?!\1)[^\\\n<>{}=]|\\.)*[A-Za-z]+ [A-Za-z][^'"`\n<>{}=]*?)\1/g)) out.push(m[2]!);
   return out.filter(Boolean);
 }
 
@@ -53,6 +54,14 @@ describe('UI copy', () => {
 
   it('has no exclamation marks in visible text', () => {
     const hits = ui.flatMap(([p, src]) => visible(src).filter(t => /[A-Za-z]!(\s|$)/.test(t)).map(t => `${p}: ${t}`));
+    expect(hits).toEqual([]);
+  });
+
+  // Owner, 2026-10-24: approximation is understood, so the screens never hedge or name sources.
+  it('never hedges or names data sources in visible text', () => {
+    const tsx = ui.filter(([p]) => p.endsWith('.tsx'));
+    const hedge = /\b(estimat\w*|approx\w*|roughly|likely|probably|confidence|usda|fooddata)\b/i;
+    const hits = tsx.flatMap(([p, src]) => visible(src).filter(t => hedge.test(t)).map(t => `${p}: ${t}`));
     expect(hits).toEqual([]);
   });
 

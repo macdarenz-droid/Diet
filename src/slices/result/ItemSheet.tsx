@@ -7,7 +7,6 @@ import { Sheet } from '@/ui/Sheet';
 import { Button } from '@/ui/primitives';
 import { Minus, Plus, Trash } from '@/ui/icons';
 import { tap } from '@/ui/haptics';
-import { SourceChip } from './Breakdown';
 
 const KEYS = ['kcal', 'protein', 'carbs', 'fat', 'satFat', 'fibre', 'sugars', 'sodium'] as const;
 
@@ -22,10 +21,6 @@ export function ItemSheet({ item, unit, onSave, onRemove, onClose }: { item: Ite
   return (
     <Sheet title={item.name} onClose={() => { if (removing.current) onRemove(); onClose(); }}>
       {close => <div class="item-sheet">
-        <div class="row item-src">
-          <SourceChip source={item.source} />
-          {item.usda && <span class="faint item-usda">{item.usda.description}</span>}
-        </div>
         <div class="weight">
           <button class="icon-btn" aria-label="Less" onClick={() => { tap(); set(grams - step); }}><Minus /></button>
           <div class="weight-val"><span class="num">{fmt(grams)}</span><span class="unit">g</span></div>
@@ -43,7 +38,7 @@ export function ItemSheet({ item, unit, onSave, onRemove, onClose }: { item: Ite
           style={{ '--p': `${((grams - 1) / (max - 1)) * 100}%`, '--lo': `${((item.gramsLow - 1) / (max - 1)) * 100}%`, '--hi': `${((item.gramsHigh - 1) / (max - 1)) * 100}%` } as JSX.CSSProperties}
           onInput={e => set(Number((e.target as HTMLInputElement).value))}
         />
-        <div class="spread mono slider-scale"><span>Likely {fmt(item.gramsLow)}–{fmt(item.gramsHigh)} g</span><button class="link" onClick={() => { tap(); set(item.grams); }}>Reset</button></div>
+        <div class="slider-foot mono"><button class="link" onClick={() => { tap(); set(item.grams); }}>Reset</button></div>
         <div class="grid2 item-grid">
           {KEYS.map(k => (
             <div key={k}><span class="k">{LABEL[k]}</span><span class="v num">{fmtNutrient(k, n[k], unit)}</span></div>

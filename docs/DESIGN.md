@@ -79,4 +79,4 @@ Constants and the pointer tracker come from M/ARC's `src/ui/gesture.ts` (slop 8 
 
 ## Copy
 
-Rules in AGENTS.md ("UI copy", "No AI wording"). Headings are one to three words. Buttons are verbs: "Take photo", "Describe", "Log meal", "Use swap". Progress lines name the actual step: "Reading photo", "Weighing portions", "Checking USDA", "Building swaps". Sources print as "Label", "USDA", "Estimate".
+Rules in AGENTS.md ("UI copy", "No AI wording"). Headings are one to three words. Buttons are verbs: "Take photo", "Describe", "Log meal", "Use swap". Progress lines name the actual step: "Reading photo", "Weighing portions", "Building swaps", "Matching foods". The screens never hedge or name data sources (owner, 2026-10-24: approximation is understood): no "estimate", "approximately", "likely", "confidence", ranges or "USDA". Sources and ranges stay in the data. `tests/copy.test.ts` enforces this.

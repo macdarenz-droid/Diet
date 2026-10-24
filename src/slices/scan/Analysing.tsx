@@ -14,7 +14,7 @@ const STEPS: { id: Step; photo: string; text: string }[] = [
   { id: 'think', photo: 'Weighing portions', text: 'Weighing portions' },
   { id: 'items', photo: 'Listing items', text: 'Listing items' },
   { id: 'swaps', photo: 'Building swaps', text: 'Building swaps' },
-  { id: 'ground', photo: 'Checking USDA', text: 'Checking USDA' },
+  { id: 'ground', photo: 'Matching foods', text: 'Matching foods' },
 ];
 
 export function failText(kind: FailKind): string {

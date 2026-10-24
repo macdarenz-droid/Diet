@@ -121,7 +121,7 @@ export function Profile() {
           </button>
           <button class="li" onClick={() => { tap(); keySheet.value = 'usda'; }}>
             <span class="key-icon"><Key /></span>
-            <span class="grow"><span class="title">USDA FoodData Central</span><span class="meta">{k.usda ? maskKey(k.usda) : 'Not added'}</span></span>
+            <span class="grow"><span class="title">Food database</span><span class="meta">{k.usda ? maskKey(k.usda) : 'Not added'}</span></span>
             <span class="end">{k.usda && <span class="chip mono"><span class="dot ok" />Added</span>}<Chevron class="chev" /></span>
           </button>
         </div>
@@ -130,7 +130,7 @@ export function Profile() {
       <Section title="Usage" i={8} end={<span class="mono">This month</span>}>
         <div class="grid2 usage">
           <div><span class="k">Scans</span><span class="v num">{fmt(month?.scans ?? 0)}</span></div>
-          <div><span class="k">Estimated cost</span><span class="v num">US${(month ? costUsd(month, PRICE) : 0).toFixed(2)}</span></div>
+          <div><span class="k">Cost</span><span class="v num">US${(month ? costUsd(month, PRICE) : 0).toFixed(2)}</span></div>
           <div><span class="k">Input tokens</span><span class="v num">{fmt(month ? month.input + month.cacheRead + month.cacheWrite : 0)}</span></div>
           <div><span class="k">Output tokens</span><span class="v num">{fmt(month?.output ?? 0)}</span></div>
         </div>

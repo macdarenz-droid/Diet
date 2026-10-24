@@ -15,5 +15,10 @@ if git ls-files | grep -E '(^|/)\.env($|\.)|(^|/)node_modules($|/)' >/dev/null; 
   say "an .env file or node_modules is tracked."
   git ls-files | grep -E '(^|/)\.env($|\.)|(^|/)node_modules($|/)' >&2
 fi
+# Signing keys and built apps.
+if git ls-files | grep -E '\.(keystore|jks|p12|apk|aab)$' >/dev/null; then
+  say "a keystore or a built app is tracked."
+  git ls-files | grep -E '\.(keystore|jks|p12|apk|aab)$' >&2
+fi
 [ "$fail" = 0 ] && echo "Agent guard: passed"
 exit "$fail"

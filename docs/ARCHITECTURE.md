@@ -79,7 +79,7 @@ One scan, start to finish:
    - up to two follow-up questions with tap answers ("Fried or grilled?");
    - three to five swaps, each a full replacement meal (its own items and grams), what it keeps, its kind (ingredient, method, dish, product, portion) and its effort.
    Progress shown to the user follows real stream events (request sent, thinking, writing items, writing swaps), never a timer.
-3. **Ground.** Each distinct USDA search name is looked up in FoodData Central (Foundation, SR Legacy and Survey/FNDDS data types; values per 100 g). The best candidate is chosen by name overlap and by closeness of its energy to Claude's estimate; a candidate more than 60% off is rejected. Each item then carries its source: **Label**, **USDA** (with the food's name and FDC id) or **Estimate** (Claude's own numbers). Results are cached for 30 days. Without a USDA key, or when USDA rate-limits, items fall back to Estimate and are labelled so.
+3. **Ground.** Each distinct USDA search name is looked up in FoodData Central (Foundation, SR Legacy and Survey/FNDDS data types; values per 100 g). The best candidate is chosen by name overlap and by closeness of its energy to Claude's estimate; a candidate more than 60% off is rejected. Each item then carries its source internally: label, USDA (with the food's name and FDC id) or Claude's estimate. The screens do not show sources, ranges or confidence (owner, 2026-10-24); they stay in the data for tuning and future features. Results are cached for 30 days. Without a USDA key, or when USDA rate-limits, items keep Claude's estimate.
 4. **Compute.** Totals, ranges and swap differences are plain arithmetic in `src/nutrition/math.ts` (grams × per-100 g ÷ 100), never asked of the model. Editing an item's grams recomputes everything instantly without another call.
 5. **Refine.** Answering a follow-up question re-runs step 2 with the same image and the answer, then grounds again (cached lookups are free).
 6. **Log.** The meal, or a chosen swap in its place, is saved to IndexedDB with its thumbnail.
@@ -106,7 +106,7 @@ Day boundaries use the device's local time zone (tests run in Sydney and Manila)
 | Risk | Mitigation |
 |---|---|
 | A Claude key in browser storage can be read by anyone holding the unlocked phone, or by injected script | strict CSP (`script-src 'self'`, `connect-src` limited to §2), no third-party scripts, model text rendered as text only; one key per person with a monthly spend limit set in the Anthropic Console; a relay (like M/ARC's Escobar Worker) replaces direct calls before any public release |
-| Photo portion estimates are approximate (hidden oil, sauces, depth) | every number has a range; follow-up questions; grams are editable; sources are labelled |
+| Photo portion estimates are approximate (hidden oil, sauces, depth) | follow-up questions; grams are editable; ranges and sources kept in the data |
 | USDA coverage of Filipino and Australian dishes is thin | Claude's estimate stays the fallback and is labelled; regional tables (FSANZ AFCD, FNRI PhilFCT) are a later step once their licences are checked |
 | USDA demo key is shared and rate-limited (it reported 10 per hour and was already used up when tested) | each person adds a free personal key; lookups are cached |
 | A model or API change breaks parsing | schema-validated output, typed SDK errors, the stop reason checked before content; server-side refusal fallback (`fallbacks: "default"`) enabled |

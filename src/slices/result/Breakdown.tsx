@@ -1,19 +1,19 @@
 import './result.css';
 import type { JSX } from 'preact';
-import type { EnergyUnit, Item, Nutrients, Source } from '@/core/models';
-import { fmt, fmtEnergy, fmtNutrient, roundEnergy, roundNutrient } from '@/core/units';
+import type { EnergyUnit, Item, Nutrients } from '@/core/models';
+import { fmt, fmtNutrient, roundEnergy, roundNutrient } from '@/core/units';
 import { scale } from '@/nutrition/math';
 import { MacroBar } from '@/ui/charts';
 import { CountUp } from '@/ui/primitives';
-import { Chevron, Database, Estimate, Label } from '@/ui/icons';
+import { Chevron } from '@/ui/icons';
 import { tap } from '@/ui/haptics';
 
-export function EnergyDisplay({ n, low, high, unit }: { n: Nutrients; low?: Nutrients; high?: Nutrients; unit: EnergyUnit }) {
-  const showRange = low && high && roundEnergy(high.kcal, unit) - roundEnergy(low.kcal, unit) >= (unit === 'kJ' ? 20 : 5);
+// Sources and gram ranges stay in the data; the screen shows one clean figure (owner, 2026-10-24:
+// approximation is understood, so no estimate, range, source or confidence wording).
+export function EnergyDisplay({ n, unit }: { n: Nutrients; unit: EnergyUnit }) {
   return (
     <div class="energy">
       <div class="display"><CountUp value={n.kcal} format={v => fmt(roundEnergy(v, unit))} /><span class="unit">{unit}</span></div>
-      {showRange && <div class="mono energy-range num">Range {fmt(roundEnergy(low!.kcal, unit))}–{fmtEnergy(high!.kcal, unit)}</div>}
     </div>
   );
 }
@@ -21,10 +21,10 @@ export function EnergyDisplay({ n, low, high, unit }: { n: Nutrients; low?: Nutr
 const MINOR = ['satFat', 'fibre', 'sugars', 'sodium'] as const;
 const MINOR_LABEL: Record<(typeof MINOR)[number], string> = { satFat: 'Saturated fat', fibre: 'Fibre', sugars: 'Sugars', sodium: 'Sodium' };
 
-export function Breakdown({ n, unit, low, high }: { n: Nutrients; unit: EnergyUnit; low?: Nutrients; high?: Nutrients }) {
+export function Breakdown({ n, unit }: { n: Nutrients; unit: EnergyUnit }) {
   return (
     <div class="breakdown">
-      <EnergyDisplay n={n} low={low} high={high} unit={unit} />
+      <EnergyDisplay n={n} unit={unit} />
       <MacroBar n={n} />
       <div class="grid2 minor">
         {MINOR.map(k => (
@@ -38,18 +38,6 @@ export function Breakdown({ n, unit, low, high }: { n: Nutrients; unit: EnergyUn
   );
 }
 
-const SOURCE: Record<Source, { label: string; icon: (p: JSX.SVGAttributes<SVGSVGElement>) => JSX.Element }> = {
-  label: { label: 'Label', icon: Label },
-  usda: { label: 'USDA', icon: Database },
-  estimate: { label: 'Estimate', icon: Estimate },
-};
-
-export function SourceChip({ source }: { source: Source }) {
-  const s = SOURCE[source];
-  const Icon = s.icon;
-  return <span class={`chip mono src-${source}`}><Icon />{s.label}</span>;
-}
-
 export function ItemList({ items, unit, onEdit }: { items: Item[]; unit: EnergyUnit; onEdit?: (index: number) => void }) {
   return (
     <div class="list items">
@@ -59,7 +47,7 @@ export function ItemList({ items, unit, onEdit }: { items: Item[]; unit: EnergyU
           <>
             <span class="grow">
               <span class="title item-name">{it.name}</span>
-              <span class="meta item-meta"><SourceChip source={it.source} /><span class="num">{fmt(roundNutrient('protein', it.grams))} g</span>{it.detail ? <span class="item-detail"> · {it.detail}</span> : null}</span>
+              <span class="meta item-meta"><span class="num">{fmt(roundNutrient('protein', it.grams))} g</span>{it.detail ? <span class="item-detail"> · {it.detail}</span> : null}</span>
             </span>
             <span class="end">
               <span class="num item-kj">{fmtNutrient('kcal', e.kcal, unit)}</span>

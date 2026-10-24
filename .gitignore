@@ -8,3 +8,8 @@ dist/
 screenshots/
 test-results/
 *.log
+android/
+out/
+*.keystore
+*.jks
+*.apk

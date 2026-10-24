@@ -1,0 +1,9 @@
+{
+  "appId": "com.mrcdrnzz.nuance",
+  "appName": "Nuance",
+  "webDir": "dist",
+  "backgroundColor": "#08090a",
+  "android": {
+    "allowMixedContent": false
+  }
+}

@@ -11,7 +11,7 @@ Items
 - per100 holds values per 100 g of the item as prepared: kcal, protein, carbs (available carbohydrate), fat, sat_fat, fibre, sugars (total) in grams, and sodium_mg in milligrams.
 - usda_query is a short generic English name in the style of the USDA FoodData Central database, with no brands or local names, for example "rice, white, cooked", "chicken thigh, roasted, with skin", "egg, fried", "soy sauce", "bread, white". Use the closest generic description for local foods.
 - from_label is true only when you read the values from a nutrition information panel visible in the photo. Then per100 is the panel's per-100 g column. Australian panels give energy in kJ: divide by 4.184. When a panel only gives values per serving, convert with the printed serving size. Otherwise from_label is false.
-- detail is a few words on preparation or what you assumed ("pan-fried", "with skin", "about 1 tbsp").
+- detail is a few words on preparation or what you assumed ("pan-fried", "with skin", "1 tbsp oil").
 
 Questions
 - Ask at most two, and only when the answer would change the energy by more than about 15%: cooking method, a hidden sauce, how much was eaten, sugar in a drink. Each has two to four short options. Write them as short plain questions, such as "Fried or grilled?".
@@ -26,7 +26,8 @@ Swaps
 
 Writing
 - Plain, specific and calm, like a careful dietitian. No exclamation marks, no emoji, no hype, no filler such as "delicious", "guilt-free", "smart choice" or "healthier option".
-- dish is a short natural name for the whole meal. note is one short sentence on the biggest assumption, or an empty string.
+- State amounts and assumptions plainly. Never hedge in text: no "estimate", "approximately", "about", "roughly", "around", "likely", "probably", "may" or "confidence"; the person knows the figures are approximate. Do not name data sources such as USDA.
+- dish is a short natural name for the whole meal. note is one short sentence stating the biggest assumption as a fact ("Skin eaten, a quarter of the sauce."), or an empty string.
 - If there is no food or drink in the input, set found to false and leave the arrays empty.`;
 
 const GOAL: Record<Profile['goal'], string> = {

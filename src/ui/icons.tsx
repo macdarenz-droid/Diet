@@ -23,13 +23,20 @@ export const Plus = icon(<path d="M12 6v12M6 12h12" />);
 export const Swap = icon(<><path d="M5 8.5h12.5m0 0L14 5m3.5 3.5L14 12" /><path d="M19 15.5H6.5m0 0L10 12m-3.5 3.5L10 19" /></>);
 export const Arrow = icon(<path d="M5 12h14m0 0-5.5-5.5M19 12l-5.5 5.5" />);
 export const Refresh = icon(<><path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3" /><path d="M19.5 4.5v4h-4" /></>);
-export const Label = icon(<><rect x="5" y="3.5" width="14" height="17" rx="2.5" /><path d="M8.5 8h7M8.5 11.5h7M8.5 15h4" /></>);
-export const Database = icon(<><ellipse cx="12" cy="6" rx="7" ry="2.5" /><path d="M5 6v12c0 1.4 3.1 2.5 7 2.5s7-1.1 7-2.5V6M5 12c0 1.4 3.1 2.5 7 2.5s7-1.1 7-2.5" /></>);
-export const Estimate = icon(<><circle cx="12" cy="12" r="8" /><path d="M12 8v4.5l3 1.8" /></>);
+/** The Nuance mark: an N whose diagonal fades between two solid strokes. */
 export const Mark = (p: P) => (
   <svg viewBox="0 0 32 32" fill="none" aria-hidden="true" {...p}>
+    <defs>
+      <linearGradient id="nuance-mark" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="currentColor" />
+        <stop offset="1" stop-color="currentColor" stop-opacity=".22" />
+      </linearGradient>
+    </defs>
     <rect x="1" y="1" width="30" height="30" rx="9" fill="currentColor" opacity=".08" />
-    <path d="M9 20.5c0-5 3.3-9.5 8.2-10.6.9-.2 1.7.6 1.5 1.5C17.6 16.3 13.6 20 9 20.5Z" fill="currentColor" />
-    <path d="M14 23c4.6-.4 8.5-3.4 9.6-7.8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+    <g stroke-linecap="round" stroke-width="2.6">
+      <path d="M11 10.5v11" stroke="currentColor" />
+      <path d="M21 10.5v11" stroke="currentColor" />
+      <path d="M11.4 11.1 20.6 20.9" stroke="url(#nuance-mark)" />
+    </g>
   </svg>
 );
