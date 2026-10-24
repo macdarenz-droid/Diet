@@ -1,0 +1,92 @@
+name: Android APK
+# Builds the Android app from main and publishes it as a GitHub release, so the newest APK is always at
+# https://github.com/macdarenz-droid/Diet/releases/latest/download/Nuance.apk
+# Signing: with the NUANCE_KEYSTORE_B64 / NUANCE_KEYSTORE_PASSWORD / NUANCE_KEY_ALIAS secrets set, every
+# build is signed with that one key and installs over the last. Without them the debug key of the CI run
+# is used, which changes each run: an update then needs the old app uninstalled first.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: apk-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    # contents: write is needed to publish the release; pull requests get a read-only token anyway.
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          fetch-depth: 0
+      - run: git fetch --no-tags origin main:refs/remotes/origin/main || true
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Agent guard
+        run: bash .github/scripts/agent-guard.sh
+      - run: npm ci
+      - name: Typecheck, tests and production build
+        run: npm run check
+      - name: Generate the Android project
+        run: bash scripts/android.sh
+      - name: Build the APK
+        run: cd android && chmod +x gradlew && ./gradlew --no-daemon assembleDebug
+      - name: Sign with the Nuance key when it is configured
+        env:
+          KS_B64: ${{ secrets.NUANCE_KEYSTORE_B64 }}
+          KS_PW: ${{ secrets.NUANCE_KEYSTORE_PASSWORD }}
+          KS_ALIAS: ${{ secrets.NUANCE_KEY_ALIAS }}
+        run: |
+          set -euo pipefail
+          APK=android/app/build/outputs/apk/debug/app-debug.apk
+          BUILD_TOOLS="$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -n 1)"
+          if [ -n "${KS_B64:-}" ]; then
+            echo "$KS_B64" | base64 -d > "$RUNNER_TEMP/nuance.keystore"
+            "$BUILD_TOOLS/zipalign" -p -f 4 "$APK" "$RUNNER_TEMP/aligned.apk"
+            "$BUILD_TOOLS/apksigner" sign --ks "$RUNNER_TEMP/nuance.keystore" --ks-key-alias "$KS_ALIAS" --ks-pass env:KS_PW --key-pass env:KS_PW --out "$APK" "$RUNNER_TEMP/aligned.apk"
+            rm -f "$RUNNER_TEMP/nuance.keystore" "$RUNNER_TEMP/aligned.apk"
+            echo "SIGNING=Nuance key" >> "$GITHUB_ENV"
+          else
+            echo "::warning::NUANCE_KEYSTORE_B64 is not set: this APK carries the run's debug key; updating needs an uninstall."
+            echo "SIGNING=debug key of this run" >> "$GITHUB_ENV"
+          fi
+          "$BUILD_TOOLS/apksigner" verify --print-certs "$APK" | tee "$RUNNER_TEMP/certs.txt"
+          mkdir -p out
+          cp "$APK" out/Nuance.apk
+          (cd out && sha256sum Nuance.apk > Nuance.apk.sha256)
+      - name: Check the APK carries this build
+        run: |
+          set -euo pipefail
+          unzip -p out/Nuance.apk assets/public/index.html | cmp - dist/index.html
+          unzip -l out/Nuance.apk | grep -q 'assets/public/sw.js'
+      - name: Publish the release
+        if: github.event_name != 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          VERSION="$(node -p "require('./package.json').version")"
+          TAG="v${VERSION}-build.${GITHUB_RUN_NUMBER}"
+          SHA="$(cut -c1-64 out/Nuance.apk.sha256)"
+          NOTES="Nuance ${VERSION}, build ${GITHUB_RUN_NUMBER}, commit ${GITHUB_SHA::7}. Signed with the ${SIGNING}. SHA-256 ${SHA}."
+          gh release create "$TAG" out/Nuance.apk out/Nuance.apk.sha256 --title "Nuance ${VERSION} (build ${GITHUB_RUN_NUMBER})" --notes "$NOTES" --target "$GITHUB_SHA" --latest
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: Nuance-apk
+          path: out/
+          retention-days: 30

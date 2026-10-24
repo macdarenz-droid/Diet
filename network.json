@@ -1,0 +1,6 @@
+{
+  "comment": "The only hosts a build may contact (docs/ARCHITECTURE.md, Network). vite.config.ts builds the CSP connect-src from this list; tests/network.test.ts keeps it equal to the docs.",
+  "connect": [
+    "https://api.anthropic.com"
+  ]
+}

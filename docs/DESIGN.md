@@ -1,0 +1,89 @@
+# Design
+
+Last updated 2026-10-24. The visual and interaction language. Tokens are defined once in `src/ui/styles.css` (`tokens:start` … `tokens:end`) and mirrored for script in `src/ui/motion.ts`.
+
+## Direction
+
+Quiet, precise, dense where it matters. The references are Linear (near-black surfaces, hairline borders, tight type) and Vercel (monochrome actions, mono metadata, crisp geometry). Colour is reserved for data. Nothing decorative moves; everything that moves explains a change of state.
+
+## Colour
+
+Two themes, chosen per device: **Night** (default) and **Day**. Interface colour is monochrome; primary buttons are ink on paper (white on Night, black on Day). Every text colour, `--ink-3` included, meets 4.5:1 on both surfaces (red team, 2026-10-24).
+
+| Token | Night | Day |
+|---|---|---|
+| `--bg` | `#08090a` | `#fbfbfa` |
+| `--surface-1` | `#0e0f11` | `#ffffff` |
+| `--surface-2` | `#141518` | `#f4f4f2` |
+| `--line` | `rgb(255 255 255 / .07)` | `rgb(0 0 0 / .07)` |
+| `--line-strong` | `rgb(255 255 255 / .13)` | `rgb(0 0 0 / .13)` |
+| `--ink` | `#f7f8f8` | `#0b0b0c` |
+| `--ink-2` | `#8a8f98` | `#5d5f66` |
+| `--ink-3` | `#7a7f87` | `#6d7077` |
+
+Data colours (validated with the dataviz palette checker on both surfaces, all pairs: colour-blind separation ≥ 9.2, normal vision ≥ 20.9):
+
+| Series | Night | Day |
+|---|---|---|
+| Protein | `#3987e5` | `#2a78d6` |
+| Carbs | `#d95926` | `#eb6834` |
+| Fat | `#199e70` | `#1baf7a` |
+
+Day fat sits below 3:1 against the surface, so every macro mark carries a visible label and value. Status colours (`good #0ca30c`, `warning #fab219`, `critical #d03b3b`, the same in both themes) are used only for swap differences, over-target meters and the dot beside an insight's title, always next to a label, arrow or value, never colour alone. Text never takes a series colour.
+
+The weight trend on Today is a single 2 px ink line (no legend: the label names it) over faint raw weigh-ins, drawn at the element's pixel width so dots stay round. It draws in from the left on entry; scrubbing it shows that day's trend weight in the card's label.
+
+## Type
+
+Inter Variable for everything people read; Geist Mono Variable for metadata, units and small caps labels. Numbers use tabular figures.
+
+| Role | Size / line | Weight | Tracking |
+|---|---|---|---|
+| Display (energy total) | 44 / 1.0 | 600 | -0.04em |
+| Screen title | 26 / 1.15 (24 on Result) | 600 | -0.03em |
+| Sheet and card title | 17–18 / 1.25 | 600 | -0.02em |
+| Section heading | 13 / 1.3 | 600 | -0.005em |
+| Body | 14 / 1.5 | 450 | -0.005em |
+| Small | 12.5 / 1.4 | 500 | 0 |
+| Mono label | 11 / 1.2 | 500 | 0.06em, uppercase |
+
+## Space, shape, depth
+
+4 px grid. Radii 10 (controls), 14 (cards), 22 (sheets). Touch targets are at least 40 px tall (44 for icon buttons); text inputs use 16 px type so iOS does not zoom on focus. Depth comes from surface steps and a 1 px top highlight (`inset 0 1px 0 rgb(255 255 255 / .04)` on Night), not from heavy shadows. Phone gutter 16 px; content max width 520 px, centred on larger screens.
+
+## Motion
+
+| Token | ms | Use |
+|---|---|---|
+| `press` | 100 | press scale |
+| `fast` | 150 | hovers, colour |
+| `base` | 200 | small state changes |
+| `enter` | 280 | screens and cards entering |
+| `exit` | 180 | leaving |
+| `sheet` | 340 | sheets |
+| `stagger` | 36 | per list item |
+| `count` | 700 | number tweens |
+
+Curves: `standard cubic-bezier(.2,0,0,1)`, `enter cubic-bezier(.05,.7,.1,1)`, `exit cubic-bezier(.3,0,.8,.15)`, `drawer cubic-bezier(.32,.72,0,1)`.
+
+- Screens: forward slides in 24 px with a fade and a 4 px blur clearing; back reverses. The View Transitions API runs it where available; elsewhere the entering screen animates on its own.
+- Lists stagger in by index. Charts grow from zero after their row has landed. Totals count up.
+- Presses scale to 0.97 with a light haptic on Android. Hover (pointer devices) raises borders and runs a spotlight that follows the cursor across cards.
+- Reduce motion (system setting or Profile): transforms, blur, chart growth, ring sweeps, press scales and the button sheen are dropped; fades shorten to 120 ms; counts jump to their value.
+- Entrance animations fill backwards only, so a finished entrance never holds a transform or opacity that a later swipe, press or fade needs.
+- Accepted: a few short animations change layout (the meal row collapsing on delete, the segmented thumb width, the active dot width); each runs once, under 340 ms.
+
+## Gestures
+
+Constants and the pointer tracker come from M/ARC's `src/ui/gesture.ts` (slop 8 px, axis lock 1.2, fling 0.4 px/ms, sheet closes past 25 % of its height).
+
+- Sheets drag down to close, with rubber-banding past the top.
+- Meals in Today swipe left to reveal Delete; past half the width deletes, with Undo in a toast.
+- Swaps scroll sideways with snap points; the centred card is full size, its neighbours recede.
+- Toasts swipe away.
+- The weight trend scrubs with a finger or the pointer (horizontal; vertical scrolling still works).
+- Insight cards with further steps open and close on tap, the steps sliding open under the action.
+
+## Copy
+
+Rules in AGENTS.md ("UI copy", "No AI wording"). Headings are one to three words. Buttons are verbs: "Take photo", "Describe", "Log meal", "Use swap". Progress lines name the actual step: "Reading photo", "Weighing portions", "Building swaps", "Matching foods". The screens never hedge or name data sources (owner, 2026-10-24: approximation is understood): no "estimate", "approximately", "likely", "confidence", ranges or "USDA". Sources and ranges stay in the data. `tests/copy.test.ts` enforces this for the screens and `tests/body.test.ts` for every insight's wording. Insight titles are one to three words ("Metabolic adaptation", "Low protein", "On track"); the text under them gives the person's own numbers and one action. The only place a data source is named is the Food data sheet in Profile, which the AFCD and CoFID licences require.

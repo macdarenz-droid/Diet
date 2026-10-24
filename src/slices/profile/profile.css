@@ -1,0 +1,23 @@
+/* Profile */
+.profile .choices .choice { height: 34px; }
+.target { min-height: 56px; cursor: text; }
+.target-input { width: 132px; flex: none; }
+.target-input .input { height: 40px; text-align: right; padding-right: 44px; font-size: 16px; }
+.key-icon { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 9px; background: var(--surface-2); border: 1px solid var(--line); color: var(--ink-2); flex: none; }
+.key-icon svg { width: 16px; height: 16px; }
+.li .title, .li .meta { display: block; }
+.dot.ok { background: var(--good); }
+.version { text-align: center; margin: 36px 0 0; }
+.clear-copy { margin: 0 0 6px; }
+.key-form { display: grid; gap: 12px; }
+.key-link { display: inline-flex; align-items: center; gap: 6px; justify-self: start; color: var(--ink-2); font-size: 13px; font-weight: 500; text-decoration: none; border-bottom: 1px solid var(--line-strong); padding-bottom: 1px; transition: color var(--d-fast), border-color var(--d-fast); }
+.key-link svg { width: 14px; height: 14px; transition: transform var(--d-base) var(--e-standard); }
+@media (hover: hover) and (pointer: fine) { .key-link:hover { color: var(--ink); border-color: var(--ink-2); } .key-link:hover svg { transform: translateX(2px); } }
+.key-actions { margin-top: 4px; }
+.value-end { font-size: 15px; font-weight: 550; color: var(--ink); padding-right: 4px; }
+/* Body details */
+.body-row .input-wrap { width: 132px; flex: none; }
+.body-row .input { height: 40px; text-align: right; padding-right: 44px; font-size: 16px; }
+.pace-rate { margin-top: 8px; }
+.food-data p { margin: 0; font-size: 13.5px; line-height: 1.55; color: var(--ink-2); }
+.food-data a { color: var(--ink); text-decoration: underline; text-decoration-color: var(--line-strong); text-underline-offset: 3px; }
