@@ -1,12 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import Anthropic from '@anthropic-ai/sdk';
 import { analyze, AnalysisError, buildRequest, type Stage } from '@/ai/analyze';
-import { SCHEMA, parseAnalysis } from '@/ai/schema';
+import { SCHEMA, panelPer100, parseAnalysis } from '@/ai/schema';
 import { SYSTEM, userText } from '@/ai/prompts';
 import { EFFORT, FALLBACK_BETA, MODEL } from '@/ai/config';
 import { defaultProfile } from '@/core/store';
 
 const nutrients = { kcal: 180, protein: 4, carbs: 30, fat: 5, sat_fat: 1, fibre: 1, sugars: 1, sodium_mg: 350 };
+const noPanel = { present: false, basis: 'per100g', serving_g: 0, energy: 0, energy_unit: 'kcal', protein: 0, carbs: 0, fat: 0, sat_fat: 0, fibre: 0, sugars: 0, sodium_mg: 0 };
 const valid = {
   found: true,
   dish: 'Garlic fried rice with egg',
@@ -14,8 +15,8 @@ const valid = {
   confidence: 'medium',
   note: 'Assumed about 1 tbsp oil.',
   items: [
-    { name: 'Garlic fried rice', detail: 'pan-fried', grams: 250, grams_low: 200, grams_high: 320, usda_query: 'rice, fried', from_label: false, per100: nutrients },
-    { name: 'Fried egg', detail: '', grams: 50, grams_low: 45, grams_high: 55, usda_query: 'egg, fried', from_label: false, per100: { ...nutrients, kcal: 196 } },
+    { name: 'Garlic fried rice', detail: 'pan-fried', grams: 250, grams_low: 200, grams_high: 320, usda_query: 'rice, fried', panel: noPanel, per100: nutrients },
+    { name: 'Fried egg', detail: '', grams: 50, grams_low: 45, grams_high: 55, usda_query: 'egg, fried', panel: noPanel, per100: { ...nutrients, kcal: 196 } },
   ],
   questions: [{ id: 'oil', text: 'Cooked in oil or butter?', options: ['Oil', 'Butter', 'Not sure'] }],
   swaps: [
@@ -57,10 +58,27 @@ describe('parseAnalysis', () => {
     expect(a.swaps[0]!.items[0]).toMatchObject({ grams: 200, gramsLow: 200, gramsHigh: 200 });
   });
 
-  it('marks label values and never trusts a label flag on a swap', () => {
-    const a = parseAnalysis({ ...valid, items: [{ ...valid.items[0], from_label: true }] });
+  it('converts an Australian per-100 g panel from kJ in code', () => {
+    const panel = { ...noPanel, present: true, energy: 1650, energy_unit: 'kJ', protein: 9.6, carbs: 58, fat: 14, sat_fat: 2.1, fibre: 7.4, sugars: 21, sodium_mg: 30 };
+    const a = parseAnalysis({ ...valid, items: [{ ...valid.items[0], panel }] });
     expect(a.items[0]!.source).toBe('label');
+    expect(a.items[0]!.per100.kcal).toBeCloseTo(1650 / 4.184);
+    expect(a.items[0]!.per100.protein).toBe(9.6);
+    // The model's own figures stay as the estimate.
+    expect(a.items[0]!.estimate.kcal).toBe(180);
     expect(a.swaps[0]!.items[0]!.source).toBe('estimate');
+  });
+
+  it('converts a per-serving panel to per 100 g, and drops one with no serving size', () => {
+    const serving = { ...noPanel, present: true, basis: 'serving', serving_g: 40, energy: 160, energy_unit: 'kcal', protein: 4, carbs: 24, fat: 6, sugars: 10, sodium_mg: 120 };
+    expect(panelPer100(serving)).toMatchObject({ kcal: 400, protein: 10, carbs: 60, fat: 15, sugars: 25, sodium: 300 });
+    expect(panelPer100({ ...serving, serving_g: 0 })).toBeNull();
+    expect(panelPer100(noPanel)).toBeNull();
+  });
+
+  it('keeps an honest zero lower bound', () => {
+    const a = parseAnalysis({ ...valid, items: [{ ...valid.items[0], grams: 10, grams_low: 0, grams_high: 20 }] });
+    expect(a.items[0]).toMatchObject({ grams: 10, gramsLow: 0, gramsHigh: 20 });
   });
 
   it('repairs ranges, clamps impossible values and drops empty items', () => {

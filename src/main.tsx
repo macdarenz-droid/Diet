@@ -6,6 +6,7 @@ import { effect } from '@preact/signals';
 import { App } from './app/App';
 import { initRouter } from './app/router';
 import { initMotion } from './ui/motion';
+import { initClock } from './core/clock';
 import { prefs } from './core/store';
 import { loadMeals } from './slices/today/meals';
 import { toast } from './app/toast';
@@ -19,6 +20,7 @@ function applyTheme(): void {
 effect(applyTheme);
 initMotion();
 initRouter();
+initClock();
 void loadMeals();
 render(<App />, document.getElementById('app')!);
 

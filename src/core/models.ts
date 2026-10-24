@@ -78,7 +78,7 @@ export interface Meal {
   kind: MealKind;
   items: Item[];
   totals: Nutrients;
-  /** The swap's title when the person logged a swap instead of the original. */
+  /** The original dish's name when the person logged a swap instead of it. */
   swappedFrom?: string;
   /** Small JPEG data URL. */
   thumb?: string;
@@ -123,6 +123,8 @@ export interface UsageMonth {
   /** YYYY-MM */
   month: string;
   scans: number;
+  /** Follow-up answers that re-ran an analysis. Missing in data saved before 2026-10-24. */
+  refines?: number;
   input: number;
   output: number;
   cacheRead: number;

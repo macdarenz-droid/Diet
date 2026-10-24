@@ -46,7 +46,7 @@ Inter Variable for everything people read; Geist Mono Variable for metadata, uni
 
 ## Space, shape, depth
 
-4 px grid. Radii 8 (controls), 14 (cards), 22 (sheets). Depth comes from surface steps and a 1 px top highlight (`inset 0 1px 0 rgb(255 255 255 / .04)` on Night), not from heavy shadows. Phone gutter 16 px; content max width 520 px, centred on larger screens.
+4 px grid. Radii 10 (controls), 14 (cards), 22 (sheets). Depth comes from surface steps and a 1 px top highlight (`inset 0 1px 0 rgb(255 255 255 / .04)` on Night), not from heavy shadows. Phone gutter 16 px; content max width 520 px, centred on larger screens.
 
 ## Motion
 

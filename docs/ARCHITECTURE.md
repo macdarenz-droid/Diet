@@ -75,7 +75,7 @@ One scan, start to finish:
 2. **Read** (one Claude call, streamed). Model `claude-opus-5-5`, adaptive thinking, effort `high` (accuracy first; one constant in `src/ai/config.ts`). Structured output (`output_config.format`, JSON schema in `src/ai/schema.ts`) returns:
    - the dish, its kind and an overall confidence;
    - items, each with a best-guess weight in grams plus a low–high range, the cooking method, a generic USDA search name, and Claude's own per-100 g estimate;
-   - values read straight from a nutrition panel when one is visible (source "Label");
+   - a visible nutrition panel copied exactly as printed (energy and its unit, per 100 g or per serving with the serving size); the code converts it to per-100 g kcal, so no model arithmetic reaches the numbers;
    - up to two follow-up questions with tap answers ("Fried or grilled?");
    - three to five swaps, each a full replacement meal (its own items and grams), what it keeps, its kind (ingredient, method, dish, product, portion) and its effort.
    Progress shown to the user follows real stream events (request sent, thinking, writing items, writing swaps), never a timer.
@@ -86,16 +86,16 @@ One scan, start to finish:
 
 Nutrients tracked: energy, protein, carbohydrate, fat, saturated fat, fibre, sugars, sodium. Energy shows in kJ (Australian default) or kcal (Philippine default); 1 kcal = 4.184 kJ.
 
-USDA nutrient ids used (checked against a live response on 2026-10-24): 1008 energy (kcal; Foundation foods may carry 2047/2048 instead, used in that order), 1003 protein, 1005 carbohydrate, 1004 fat, 1258 saturated fat, 1079 fibre, 2000 total sugars (1063 as fallback), 1093 sodium (mg).
+USDA nutrient ids used (checked against a live response on 2026-10-24): 1008 energy (kcal; Foundation foods may carry the Atwater energies instead: 2048 specific factors first, then 2047 general), 1003 protein, 1005 carbohydrate, 1004 fat, 1258 saturated fat, 1079 fibre, 2000 total sugars (1063 as fallback), 1093 sodium (mg).
 
 ## 6. Data on the device
 
 | Store | Key | Holds |
 |---|---|---|
-| localStorage | `nuance.profile` | goal, focus nutrients, diet, allergies, dislikes, region, energy unit, daily targets |
+| localStorage | `nuance.profile` | goal, diet, foods to avoid, region, energy unit, daily targets |
 | localStorage | `nuance.keys` | Claude key, USDA key |
 | localStorage | `nuance.prefs` | theme, reduce motion |
-| localStorage | `nuance.usage` | token counts per month |
+| localStorage | `nuance.usage` | per month: scans, follow-up refines and token counts (failed calls included) |
 | localStorage | `nuance.fdc.*` | USDA lookups, 30-day expiry |
 | IndexedDB `nuance` / `meals` | meal id | logged meals: time, dish, grounded items, totals, chosen swap, thumbnail |
 

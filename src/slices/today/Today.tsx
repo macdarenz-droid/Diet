@@ -3,6 +3,7 @@ import type { JSX } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { profile } from '@/core/store';
 import { fmtDay, fmtTime } from '@/core/dates';
+import { today } from '@/core/clock';
 import { fmt, fmtEnergy, roundEnergy } from '@/core/units';
 import type { Meal } from '@/core/models';
 import { MacroBar, Meter, Ring } from '@/ui/charts';
@@ -139,7 +140,7 @@ export function Today() {
     <div class="screen today">
       <header class="screen-head rise">
         <div>
-          <div class="mono">{fmtDay(Date.now())}</div>
+          <div class="mono">{fmtDay(new Date(`${today.value}T12:00:00`).getTime())}</div>
           <h1>Today</h1>
         </div>
       </header>

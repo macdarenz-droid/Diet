@@ -15,6 +15,15 @@ export const MATCHES = ['close', 'similar', 'loose'] as const satisfies readonly
 export const EFFORTS = ['none', 'low', 'medium'] as const satisfies readonly Effort[];
 
 const nutrients = obj({ kcal: num, protein: num, carbs: num, fat: num, sat_fat: num, fibre: num, sugars: num, sodium_mg: num });
+// A nutrition panel exactly as printed; the code does the unit and per-serving conversion.
+const panel = obj({
+  present: { type: 'boolean' },
+  basis: enumOf(['per100g', 'serving']),
+  serving_g: num,
+  energy: num,
+  energy_unit: enumOf(['kJ', 'kcal']),
+  protein: num, carbs: num, fat: num, sat_fat: num, fibre: num, sugars: num, sodium_mg: num,
+});
 
 // Property order is the order the model writes in: items first, swaps last, so the stream
 // shows real progress.
@@ -26,7 +35,7 @@ export const SCHEMA = obj({
   note: str,
   items: {
     type: 'array',
-    items: obj({ name: str, detail: str, grams: num, grams_low: num, grams_high: num, usda_query: str, from_label: { type: 'boolean' }, per100: nutrients }),
+    items: obj({ name: str, detail: str, grams: num, grams_low: num, grams_high: num, usda_query: str, panel, per100: nutrients }),
   },
   questions: { type: 'array', items: obj({ id: str, text: str, options: { type: 'array', items: str } }) },
   swaps: {
@@ -68,25 +77,48 @@ function nutrientsOf(v: unknown): Nutrients {
   };
 }
 
+/** Per-100 g kcal values from a panel as printed, or null when there is none or it cannot be converted. */
+export function panelPer100(v: unknown): Nutrients | null {
+  if (!isObj(v) || v.present !== true) return null;
+  const perServing = v.basis === 'serving';
+  const serving = n(v.serving_g, 5000);
+  if (perServing && serving <= 0) return null;
+  const f = perServing ? 100 / serving : 1;
+  const energy = n(v.energy, 100000) * (v.energy_unit === 'kJ' ? 1 / 4.184 : 1);
+  return nutrientsOf({
+    kcal: energy * f,
+    protein: n(v.protein) * f,
+    carbs: n(v.carbs) * f,
+    fat: n(v.fat) * f,
+    sat_fat: n(v.sat_fat) * f,
+    fibre: n(v.fibre) * f,
+    sugars: n(v.sugars) * f,
+    sodium_mg: n(v.sodium_mg, 1e6) * f,
+  });
+}
+
 function itemOf(v: unknown, fixed: boolean): Item | null {
   if (!isObj(v)) return null;
   const name = s(v.name, 80);
   const grams = n(v.grams, 5000);
   if (!name || grams <= 0) return null;
-  let low = fixed ? grams : n(v.grams_low, 5000) || grams;
-  let high = fixed ? grams : n(v.grams_high, 5000) || grams;
+  // A lower bound of 0 is honest (oil that may not be there); only a missing bound falls back.
+  const has = (x: unknown) => typeof x === 'number' && Number.isFinite(x);
+  let low = fixed || !has(v.grams_low) ? grams : n(v.grams_low, 5000);
+  let high = fixed || !has(v.grams_high) ? grams : n(v.grams_high, 5000);
   if (low > grams) low = grams;
   if (high < grams) high = grams;
-  const per100 = nutrientsOf(v.per100);
+  const estimate = nutrientsOf(v.per100);
+  const label = fixed ? null : panelPer100(v.panel);
   return {
     name,
     detail: s(v.detail, 120),
     grams,
     gramsLow: low,
     gramsHigh: high,
-    per100,
-    estimate: per100,
-    source: !fixed && v.from_label === true ? 'label' : 'estimate',
+    per100: label ?? estimate,
+    estimate,
+    source: label ? 'label' : 'estimate',
     query: s(v.usda_query, 80) || name,
   };
 }

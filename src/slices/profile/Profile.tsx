@@ -4,7 +4,7 @@ import { useState } from 'preact/hooks';
 import type { Diet, Goal, Profile as P, Targets } from '@/core/models';
 import { costUsd, keys, prefs, profile, usage } from '@/core/store';
 import { monthKey } from '@/core/dates';
-import { fmt, fromEnergy, roundEnergy } from '@/core/units';
+import { energy, fmt, fromEnergy } from '@/core/units';
 import { clearMeals } from '@/core/db';
 import { PRICE } from '@/ai/config';
 import { Button, Choices, Section, Segmented, Switch } from '@/ui/primitives';
@@ -104,7 +104,7 @@ export function Profile() {
 
       <Section title="Targets" i={6}>
         <div class="list">
-          <TargetRow label="Energy" value={roundEnergy(p.targets.energy, p.unit)} unit={p.unit} onChange={v => setTarget('energy', fromEnergy(v, p.unit))} />
+          <TargetRow label="Energy" value={Math.round(energy(p.targets.energy, p.unit))} unit={p.unit} onChange={v => setTarget('energy', fromEnergy(v, p.unit))} />
           <TargetRow label="Protein" value={p.targets.protein} unit="g" offWhenZero onChange={v => setTarget('protein', v)} />
           <TargetRow label="Fibre" value={p.targets.fibre} unit="g" onChange={v => setTarget('fibre', v)} />
           <TargetRow label="Sugars" value={p.targets.sugars} unit="g" onChange={v => setTarget('sugars', v)} />

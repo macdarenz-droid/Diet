@@ -70,12 +70,15 @@ export function swapScore(original: Nutrients, swap: Nutrients, goal: Goal, matc
     if (!weight) continue;
     s += weight * ((swap[k] - original[k]) / UNIT[k]);
   }
-  return s + MATCH_BONUS[match];
+  // A close match only breaks ties among real improvements; it never lifts a worse option.
+  return s > 0 ? s + MATCH_BONUS[match] : s;
 }
 
+/** Swaps that improve the goal, best first. One that makes the goal worse is not a swap. */
 export function rankSwaps(original: Nutrients, swaps: readonly Swap[], goal: Goal): Swap[] {
   return swaps
     .map((sw, i) => ({ sw, i, score: swapScore(original, totals(sw.items), goal, sw.match) }))
+    .filter(x => x.score > 0)
     .sort((a, b) => b.score - a.score || a.i - b.i)
     .map(x => x.sw);
 }

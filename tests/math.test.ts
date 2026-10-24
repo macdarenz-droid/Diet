@@ -90,3 +90,14 @@ describe('deltas', () => {
     expect(isBetter('lose', 'kcal', 0)).toBeNull();
   });
 });
+
+// Review of dcfa404: a close match never lifts a worse option.
+describe('swaps that make the goal worse', () => {
+  it('are dropped, however close the match', () => {
+    const original = per100({ kcal: 500 });
+    const worse = swap('worse', { kcal: 560 }, 'close');
+    const better = swap('better', { kcal: 460 }, 'loose');
+    expect(rankSwaps(original, [worse, better], 'lose').map(s => s.id)).toEqual(['better']);
+    expect(swapScore(original, per100({ kcal: 560 }), 'lose', 'close')).toBeLessThan(0);
+  });
+});

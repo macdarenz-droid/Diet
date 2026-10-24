@@ -53,12 +53,13 @@ export const keys = persisted<Keys>(KEYS.keys, { claude: '', usda: '' });
 export const prefs = persisted<Prefs>(KEYS.prefs, { theme: 'night', reduceMotion: false });
 export const usage = persisted<UsageMonth[]>(KEYS.usage, []);
 
-export function recordUsage(u: { input: number; output: number; cacheRead: number; cacheWrite: number }, at = Date.now()): void {
+/** Every billed call counts toward cost; only first analyses count as scans, follow-ups as refines. */
+export function recordUsage(u: { input: number; output: number; cacheRead: number; cacheWrite: number }, kind: 'scan' | 'refine' = 'scan', at = Date.now()): void {
   const month = monthKey(at);
   const list = usage.value.slice();
   const i = list.findIndex(m => m.month === month);
-  const cur = i >= 0 ? list[i]! : { month, scans: 0, input: 0, output: 0, cacheRead: 0, cacheWrite: 0 };
-  const next = { ...cur, scans: cur.scans + 1, input: cur.input + u.input, output: cur.output + u.output, cacheRead: cur.cacheRead + u.cacheRead, cacheWrite: cur.cacheWrite + u.cacheWrite };
+  const cur = i >= 0 ? { refines: 0, ...list[i]! } : { month, scans: 0, refines: 0, input: 0, output: 0, cacheRead: 0, cacheWrite: 0 };
+  const next = { ...cur, scans: cur.scans + (kind === 'scan' ? 1 : 0), refines: cur.refines + (kind === 'refine' ? 1 : 0), input: cur.input + u.input, output: cur.output + u.output, cacheRead: cur.cacheRead + u.cacheRead, cacheWrite: cur.cacheWrite + u.cacheWrite };
   if (i >= 0) list[i] = next; else list.push(next);
   usage.value = list.slice(-12);
 }

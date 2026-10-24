@@ -109,3 +109,48 @@ describe('groundAll', () => {
     expect(r.value[0]![0]).toBe(label);
   });
 });
+
+// Review of dcfa404: plurals and nutrients a source does not report.
+import { stem } from '@/nutrition/ground';
+
+describe('plurals', () => {
+  it.each([['tomatoes', 'tomato'], ['potatoes', 'potato'], ['mangoes', 'mango'], ['berries', 'berry'], ['eggs', 'egg'], ['hummus', 'hummus'], ['glass', 'glass'], ['peas', 'pea']])('%s → %s', (a, b) => {
+    expect(stem(a)).toBe(b);
+  });
+  it('matches singular queries to plural USDA names', () => {
+    expect(nameScore('tomato, raw', 'Tomatoes, red, ripe, raw')).toBeGreaterThanOrEqual(1);
+    expect(nameScore('potato, baked', 'Potatoes, baked, flesh and skin')).toBeGreaterThanOrEqual(1);
+    expect(nameScore('mango', 'Mangos, raw')).toBeGreaterThanOrEqual(1);
+  });
+});
+
+describe('missing nutrients', () => {
+  it('fills what the source does not report from the estimate', () => {
+    const it0 = item({ per100: per100({ kcal: 200, protein: 10, carbs: 20, fat: 8, sodium: 900, satFat: 3 }) });
+    const c: Candidate = { ...cand('Food, cooked', 210), missing: ['sodium', 'satFat'] };
+    const g = applyCandidate(it0, c);
+    expect(g.source).toBe('usda');
+    expect(g.per100.sodium).toBe(900);
+    expect(g.per100.satFat).toBe(3);
+    expect(g.per100.kcal).toBe(210);
+  });
+});
+
+describe('cache and status', () => {
+  it('caches every candidate so a cached rescan grounds the same way', async () => {
+    const many: Candidate[] = Array.from({ length: 10 }, (_, i) => cand(`Rice, fried, variant ${i}`, i === 9 ? 185 : 600, i));
+    const store: Record<string, string> = {};
+    (globalThis as { localStorage?: unknown }).localStorage = { getItem: (k: string) => store[k] ?? null, setItem: (k: string, v: string) => { store[k] = v; }, removeItem: () => {} };
+    try {
+      const { localCache } = await import('@/nutrition/lookup');
+      const fried = item({ query: 'rice, fried', per100: per100({ kcal: 190, protein: 4, carbs: 30, fat: 5 }) });
+      const first = await groundAll([[fried]], { key: 'K', cache: localCache(), search: async () => many });
+      const again = await groundAll([[fried]], { key: '', cache: localCache(), search: async () => { throw new Error('should not search'); } });
+      expect(first.value[0]![0]!.usda?.description).toBe('Rice, fried, variant 9');
+      expect(again.value[0]![0]!.usda?.description).toBe('Rice, fried, variant 9');
+      expect(again.status).toBe('done');
+    } finally {
+      delete (globalThis as { localStorage?: unknown }).localStorage;
+    }
+  });
+});

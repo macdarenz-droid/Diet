@@ -3,7 +3,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import type { Analysis, Profile } from '@/core/models';
 import { claude } from './transport';
 import { EFFORT, FALLBACK_BETA, MAX_TOKENS, MODEL } from './config';
-import { SYSTEM, userText, type Answer } from './prompts';
+import { SYSTEM, userText, type Answer, type Edits } from './prompts';
 import { InvalidOutput, SCHEMA, parseAnalysis } from './schema';
 
 import { AnalysisError, type Stage, type Usage } from './errors';
@@ -16,6 +16,7 @@ export interface AnalyzeInput {
   text?: string;
   note?: string;
   answers?: Answer[];
+  edits?: Edits;
   profile: Profile;
 }
 
@@ -28,7 +29,7 @@ export function buildRequest(input: AnalyzeInput) {
   if (input.image) {
     content.push({ type: 'image', source: { type: 'base64', media_type: input.image.mediaType, data: input.image.data }, cache_control: { type: 'ephemeral' } });
   }
-  content.push({ type: 'text', text: userText(input.profile, { text: input.text, note: input.note, answers: input.answers, hasImage: !!input.image }) });
+  content.push({ type: 'text', text: userText(input.profile, { text: input.text, note: input.note, answers: input.answers, edits: input.edits, hasImage: !!input.image }) });
   return {
     model: MODEL,
     max_tokens: MAX_TOKENS,
@@ -69,15 +70,19 @@ export async function analyze(input: AnalyzeInput, key: string, opts: { signal?:
       if (stage === 'items' && snapshot.includes('"swaps"')) to('swaps');
     });
     const msg = await stream.finalMessage();
-    if (msg.stop_reason === 'refusal') throw new AnalysisError('refusal', 'Declined');
-    if (msg.stop_reason === 'max_tokens') throw new AnalysisError('truncated', 'Response cut short');
-    const text = msg.content.flatMap(b => (b.type === 'text' ? [b.text] : [])).join('');
-    const analysis = parseAnalysis(JSON.parse(text));
     const u = msg.usage;
-    return {
-      analysis,
-      usage: { input: u.input_tokens, output: u.output_tokens, cacheRead: u.cache_read_input_tokens ?? 0, cacheWrite: u.cache_creation_input_tokens ?? 0 },
-    };
+    const usage: Usage = { input: u.input_tokens, output: u.output_tokens, cacheRead: u.cache_read_input_tokens ?? 0, cacheWrite: u.cache_creation_input_tokens ?? 0 };
+    // Billed even when the answer is unusable, so failures carry their usage for the cost figure.
+    if (msg.stop_reason === 'refusal') throw new AnalysisError('refusal', 'Declined', usage);
+    if (msg.stop_reason === 'max_tokens') throw new AnalysisError('truncated', 'Response cut short', usage);
+    const text = msg.content.flatMap(b => (b.type === 'text' ? [b.text] : [])).join('');
+    let analysis: AnalyzeResult['analysis'];
+    try {
+      analysis = parseAnalysis(JSON.parse(text));
+    } catch {
+      throw new AnalysisError('invalid', 'Unreadable response', usage);
+    }
+    return { analysis, usage };
   } catch (e) {
     if (opts.signal?.aborted) throw new AnalysisError('aborted', 'Cancelled');
     throw failFrom(e);

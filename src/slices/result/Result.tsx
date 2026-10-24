@@ -49,6 +49,8 @@ export function Result() {
 
   useEffect(() => { if (!s) go('today', { replace: true }); }, [s]);
   useEffect(() => { if (s?.error && s.phase === 'ready') toast(failText(s.error.kind)); }, [s?.error]);
+  // Edits wait while a follow-up answer re-runs the analysis; the refreshed items keep them by name.
+  useEffect(() => { if (s?.refining) setEdit(null); }, [s?.refining]);
   if (!s || !c) return <div class="screen bare" />;
 
   const a = c.analysis;
@@ -60,8 +62,9 @@ export function Result() {
     if (!meal) return;
     hapticConfirm();
     await logMeal(meal);
-    scan.value = null;
-    go('today', { replace: true });
+    // Back to the Today entry already in history (the scan is cleared when Today shows), so a logged
+    // scan leaves no extra Back step behind.
+    back();
     toast(chosen ? 'Swap logged' : 'Meal logged');
   };
 
@@ -103,7 +106,7 @@ export function Result() {
       <Questions />
 
       <Section title="Items" i={3} end={<span class="mono num">{a.items.length}</span>}>
-        <ItemList items={a.items} unit={p.unit} onEdit={setEdit} />
+        <ItemList items={a.items} unit={p.unit} onEdit={s.refining ? undefined : setEdit} />
       </Section>
 
       {c.swaps.length > 0 && (

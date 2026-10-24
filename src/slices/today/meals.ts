@@ -1,13 +1,14 @@
 import { computed, signal } from '@preact/signals';
 import type { Meal } from '@/core/models';
 import { allMeals, deleteMeal, putMeal } from '@/core/db';
-import { sameDay } from '@/core/dates';
+import { dayKey } from '@/core/dates';
+import { today } from '@/core/clock';
 import { add, zero } from '@/nutrition/math';
 
 export const meals = signal<Meal[]>([]);
 export const loaded = signal(false);
 
-export const todays = computed(() => meals.value.filter(m => sameDay(m.at, Date.now())));
+export const todays = computed(() => { const d = today.value; return meals.value.filter(m => dayKey(m.at) === d); });
 export const todayTotals = computed(() => todays.value.reduce((acc, m) => add(acc, m.totals), zero()));
 
 export async function loadMeals(): Promise<void> {

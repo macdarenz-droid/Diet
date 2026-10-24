@@ -19,6 +19,7 @@ const PORT = Number(process.env.SCREENS_PORT) || 4173;
 mkdirSync(OUT, { recursive: true });
 
 const n = (kcal, protein, carbs, fat, sat_fat, fibre, sugars, sodium_mg) => ({ kcal, protein, carbs, fat, sat_fat, fibre, sugars, sodium_mg });
+const NOPANEL = { present: false, basis: 'per100g', serving_g: 0, energy: 0, energy_unit: 'kcal', protein: 0, carbs: 0, fat: 0, sat_fat: 0, fibre: 0, sugars: 0, sodium_mg: 0 };
 const ANALYSIS = {
   found: true,
   dish: 'Chicken adobo',
@@ -26,9 +27,9 @@ const ANALYSIS = {
   confidence: 'medium',
   note: 'Assumed the skin is eaten and about a quarter of the sauce.',
   items: [
-    { name: 'Chicken thigh and drumstick', detail: 'braised, with skin', grams: 260, grams_low: 210, grams_high: 320, usda_query: 'chicken thigh, stewed, with skin', from_label: false, per100: n(232, 24, 0.5, 15, 4.2, 0, 0.3, 450) },
-    { name: 'Adobo sauce', detail: 'soy, vinegar, garlic', grams: 60, grams_low: 30, grams_high: 100, usda_query: 'soy sauce and vinegar sauce', from_label: false, per100: n(62, 3, 6, 3, 0.8, 0.2, 4, 2400) },
-    { name: 'Bay leaves', detail: 'not eaten', grams: 1, grams_low: 1, grams_high: 2, usda_query: 'bay leaf', from_label: false, per100: n(0, 0, 0, 0, 0, 0, 0, 0) },
+    { name: 'Chicken thigh and drumstick', detail: 'braised, with skin', grams: 260, grams_low: 210, grams_high: 320, usda_query: 'chicken thigh, stewed, with skin', panel: NOPANEL, per100: n(232, 24, 0.5, 15, 4.2, 0, 0.3, 450) },
+    { name: 'Adobo sauce', detail: 'soy, vinegar, garlic', grams: 60, grams_low: 30, grams_high: 100, usda_query: 'soy sauce and vinegar sauce', panel: NOPANEL, per100: n(62, 3, 6, 3, 0.8, 0.2, 4, 2400) },
+    { name: 'Bay leaves', detail: 'not eaten', grams: 1, grams_low: 1, grams_high: 2, usda_query: 'bay leaf', panel: NOPANEL, per100: n(0, 0, 0, 0, 0, 0, 0, 0) },
   ],
   questions: [{ id: 'rice', text: 'Served with rice?', options: ['No rice', '1 cup', '2 cups'] }],
   swaps: [

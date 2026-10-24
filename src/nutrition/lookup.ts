@@ -25,7 +25,8 @@ export function localCache(now: () => number = Date.now): Cache {
       } catch { return undefined; }
     },
     set(query, c) {
-      try { localStorage.setItem(PREFIX + query.toLowerCase(), JSON.stringify({ at: now(), c: c.slice(0, 6) })); } catch { /* storage full or blocked */ }
+      // The whole result, so a cached lookup grounds exactly like the live one did.
+      try { localStorage.setItem(PREFIX + query.toLowerCase(), JSON.stringify({ at: now(), c })); } catch { /* storage full or blocked */ }
     },
   };
 }
@@ -41,7 +42,7 @@ export async function groundAll(lists: Item[][], opts: { key: string; cache: Cac
   const run: Search = opts.search ?? ((q, s) => search(q, opts.key, s));
   const queries = [...new Set(lists.flat().filter(i => i.source !== 'label' && i.query.trim()).map(i => i.query.trim().toLowerCase()))];
   const found = new Map<string, Candidate[]>();
-  let status: GroundStatus = opts.key ? 'done' : 'no-key';
+  let status: GroundStatus = 'done';
 
   const todo: string[] = [];
   for (const q of queries) {
@@ -49,6 +50,8 @@ export async function groundAll(lists: Item[][], opts: { key: string; cache: Cac
     if (hit) found.set(q, hit); else todo.push(q);
   }
 
+  // No key only matters when something still had to be fetched.
+  if (!opts.key && todo.length) status = 'no-key';
   if (opts.key) {
     let stopped = false;
     const worker = async () => {

@@ -47,6 +47,8 @@ export function Analysing() {
 
   useEffect(() => { if (!s) go('today', { replace: true }); }, [s]);
   useEffect(() => { if (s?.phase === 'ready') go('result', { replace: true }); }, [s?.phase]);
+  // Leaving by any route (Back gesture, tab, Cancel) stops a call still in flight, so it costs nothing more.
+  useEffect(() => () => { if (scan.value?.phase === 'running') cancel(); }, []);
 
   if (!s) return <div class="screen bare" />;
   const at = STEPS.findIndex(x => x.id === s.step);
@@ -55,7 +57,7 @@ export function Analysing() {
   return (
     <div class="screen bare analysing">
       <div class="topbar rise">
-        <button class="icon-btn glass" aria-label="Cancel" onClick={() => { tap(); cancel(); back(); }}><Back /></button>
+        <button class="icon-btn glass" aria-label="Cancel" onClick={() => { tap(); back(); }}><Back /></button>
         {!failed && <Elapsed />}
       </div>
 

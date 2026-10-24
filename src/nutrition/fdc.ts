@@ -1,6 +1,6 @@
 // USDA FoodData Central: search and per-100 g parsing. Nutrient ids checked against a live
 // response on 2026-10-24 (docs/ARCHITECTURE.md §5).
-import type { Nutrients } from '@/core/models';
+import type { NutrientKey, Nutrients } from '@/core/models';
 import { atwater } from './math';
 
 export const FDC_URL = 'https://api.nal.usda.gov/fdc/v1/foods/search';
@@ -10,7 +10,8 @@ export interface FdcNutrient { nutrientId?: number; value?: number; unitName?: s
 export interface FdcFood { fdcId: number; description: string; dataType?: string; foodNutrients?: FdcNutrient[] }
 export interface FdcSearch { foods?: FdcFood[] }
 
-export interface Candidate { fdcId: number; description: string; dataType: string; per100: Nutrients; rank: number }
+/** missing lists nutrients the source does not report; grounding fills those from the estimate. */
+export interface Candidate { fdcId: number; description: string; dataType: string; per100: Nutrients; rank: number; missing?: NutrientKey[] }
 
 const ID = {
   energy: [1008, 2048, 2047],
@@ -38,6 +39,11 @@ function pick(map: Map<number, FdcNutrient>, ids: readonly number[], unit: 'G' |
 
 /** Per-100 g values for one food, or null when protein, carbs and fat are not all present. */
 export function parseFood(f: FdcFood): Nutrients | null {
+  return parseFoodWithGaps(f)?.per100 ?? null;
+}
+
+/** As parseFood, plus which optional nutrients the food does not report (they read 0 in per100). */
+export function parseFoodWithGaps(f: FdcFood): { per100: Nutrients; missing: NutrientKey[] } | null {
   const map = new Map<number, FdcNutrient>();
   for (const n of f.foodNutrients ?? []) if (typeof n.nutrientId === 'number' && !map.has(n.nutrientId)) map.set(n.nutrientId, n);
   const protein = pick(map, ID.protein, 'G');
@@ -45,23 +51,19 @@ export function parseFood(f: FdcFood): Nutrients | null {
   const fat = pick(map, ID.fat, 'G');
   if (protein === undefined || carbs === undefined || fat === undefined) return null;
   const kcal = pick(map, ID.energy, 'KCAL') ?? atwater({ protein, carbs, fat });
+  const optional = { satFat: pick(map, ID.satFat, 'G'), fibre: pick(map, ID.fibre, 'G'), sugars: pick(map, ID.sugars, 'G'), sodium: pick(map, ID.sodium, 'MG') };
+  const missing = (Object.keys(optional) as (keyof typeof optional)[]).filter(k => optional[k] === undefined);
   return {
-    kcal,
-    protein,
-    carbs,
-    fat,
-    satFat: pick(map, ID.satFat, 'G') ?? 0,
-    fibre: pick(map, ID.fibre, 'G') ?? 0,
-    sugars: pick(map, ID.sugars, 'G') ?? 0,
-    sodium: pick(map, ID.sodium, 'MG') ?? 0,
+    per100: { kcal, protein, carbs, fat, satFat: optional.satFat ?? 0, fibre: optional.fibre ?? 0, sugars: optional.sugars ?? 0, sodium: optional.sodium ?? 0 },
+    missing,
   };
 }
 
 export function parseSearch(json: FdcSearch): Candidate[] {
   const out: Candidate[] = [];
   (json.foods ?? []).forEach((f, rank) => {
-    const per100 = parseFood(f);
-    if (per100 && typeof f.fdcId === 'number') out.push({ fdcId: f.fdcId, description: f.description ?? '', dataType: f.dataType ?? '', per100, rank });
+    const parsed = parseFoodWithGaps(f);
+    if (parsed && typeof f.fdcId === 'number') out.push({ fdcId: f.fdcId, description: f.description ?? '', dataType: f.dataType ?? '', per100: parsed.per100, rank, ...(parsed.missing.length ? { missing: parsed.missing } : {}) });
   });
   return out;
 }

@@ -4,8 +4,9 @@ export type Stage = 'send' | 'think' | 'items' | 'swaps';
 
 export type FailKind = 'auth' | 'rate' | 'busy' | 'network' | 'refusal' | 'truncated' | 'invalid' | 'denied' | 'aborted' | 'unknown';
 
-export class AnalysisError extends Error {
-  constructor(public readonly kind: FailKind, message: string) { super(message); }
-}
-
 export interface Usage { input: number; output: number; cacheRead: number; cacheWrite: number }
+
+/** usage is set when the call completed and was billed but its answer was unusable. */
+export class AnalysisError extends Error {
+  constructor(public readonly kind: FailKind, message: string, public readonly usage?: Usage) { super(message); }
+}

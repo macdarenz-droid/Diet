@@ -10,7 +10,7 @@ Items
 - grams is your best estimate of the edible weight as served. Use what is visible: plate and bowl size (a dinner plate is about 26 cm), cutlery, hands, cups, packaging. grams_low and grams_high bound the weight you are about 80% sure of; make the range honest, wider when depth or sauce hides the food.
 - per100 holds values per 100 g of the item as prepared: kcal, protein, carbs (available carbohydrate), fat, sat_fat, fibre, sugars (total) in grams, and sodium_mg in milligrams.
 - usda_query is a short generic English name in the style of the USDA FoodData Central database, with no brands or local names, for example "rice, white, cooked", "chicken thigh, roasted, with skin", "egg, fried", "soy sauce", "bread, white". Use the closest generic description for local foods.
-- from_label is true only when you read the values from a nutrition information panel visible in the photo. Then per100 is the panel's per-100 g column. Australian panels give energy in kJ: divide by 4.184. When a panel only gives values per serving, convert with the printed serving size. Otherwise from_label is false.
+- panel: when a nutrition information panel is visible, copy it exactly as printed and do no arithmetic: present true; basis "per100g" if it has a per-100 g (or per-100 mL) column, otherwise "serving" with serving_g the printed serving size in grams; energy and energy_unit ("kJ" or "kcal") as printed; the other values from the same column (sodium in mg). The app converts them. When no panel is visible, present is false and every number is 0.
 - detail is a few words on preparation or what you assumed ("pan-fried", "with skin", "1 tbsp oil").
 
 Questions
@@ -53,7 +53,10 @@ const REGION: Record<Profile['region'], string> = {
 
 export interface Answer { question: string; answer: string }
 
-export function userText(p: Profile, input: { text?: string; note?: string; answers?: Answer[]; hasImage: boolean }): string {
+/** The person's corrections to the items, keyed by lower-case item name. */
+export interface Edits { grams: Record<string, number>; removed: string[] }
+
+export function userText(p: Profile, input: { text?: string; note?: string; answers?: Answer[]; edits?: Edits; hasImage: boolean }): string {
   const lines = [
     `Lives in: ${REGION[p.region]}.`,
     `Goal: ${GOAL[p.goal]}.`,
@@ -66,6 +69,12 @@ export function userText(p: Profile, input: { text?: string; note?: string; answ
   if (input.answers?.length) {
     lines.push('', 'They answered your earlier questions; use these answers and do not ask them again:');
     for (const a of input.answers) lines.push(`- ${a.question} ${a.answer}`);
+  }
+  const grams = Object.entries(input.edits?.grams ?? {});
+  if (grams.length || input.edits?.removed.length) {
+    lines.push('', 'They corrected the items; keep these corrections:');
+    for (const [name, g] of grams) lines.push(`- ${name}: ${g} g`);
+    for (const name of input.edits?.removed ?? []) lines.push(`- ${name}: not eaten, leave it out`);
   }
   return lines.join('\n');
 }

@@ -9,8 +9,16 @@ const LOW_KCAL = 25;
 
 const STOP = new Set(['and', 'with', 'or', 'in', 'of', 'the', 'a', 'nfs', 'ns', 'raw', 'cooked', 'prepared', 'made', 'from', 'type']);
 
+/** Plural to singular for food names: berries → berry, tomatoes → tomato, eggs → egg (not "glass", "hummus"). */
+export function stem(t: string): string {
+  if (/[^aeiou]ies$/.test(t)) return t.slice(0, -3) + 'y';
+  if (/[^aeiou]oes$/.test(t)) return t.slice(0, -2);
+  if (/(ss|us|is)$/.test(t)) return t;
+  return t.replace(/(?<=[a-z]{2})s$/, '');
+}
+
 export function tokens(s: string): string[] {
-  return s.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').split(/\s+/).filter(t => t.length > 1 && !STOP.has(t)).map(t => t.replace(/(ies)$/, 'y').replace(/(?<=[a-z]{3})s$/, ''));
+  return s.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').split(/\s+/).filter(t => t.length > 1 && !STOP.has(t)).map(stem);
 }
 
 /** Share of the query's words found in the description, 0..1. */
@@ -46,5 +54,8 @@ export function choose(query: string, estimate: Nutrients, candidates: readonly 
 export function applyCandidate(item: Item, c: Candidate | null): Item {
   if (item.source === 'label') return item;
   if (!c) return { ...item, per100: item.estimate, source: 'estimate', usda: undefined };
-  return { ...item, per100: c.per100, source: 'usda', usda: { fdcId: c.fdcId, description: c.description } };
+  // Nutrients the source does not report come from the estimate rather than reading as zero.
+  const per100 = { ...c.per100 };
+  for (const k of c.missing ?? []) per100[k] = item.estimate[k];
+  return { ...item, per100, source: 'usda', usda: { fdcId: c.fdcId, description: c.description } };
 }
