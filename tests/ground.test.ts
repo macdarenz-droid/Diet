@@ -1,9 +1,9 @@
 // Grounding: matching Claude's items to the offline food tables (docs/FOOD-DATA.md).
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { applyCandidate, choose, energyFits, nameScore, stem, tokens } from '@/nutrition/ground';
+import { MIN_COVER, applyCandidate, choose, energyFits, nameScore, stem, tokens } from '@/nutrition/ground';
 import { LOOKUPS_MAX, cleanQuery, groundAll } from '@/nutrition/lookup';
-import { FOOD_FILES, FoodIndex, checkTable } from '@/nutrition/foods';
+import { ALIAS_COVER, FOOD_FILES, FoodIndex, checkTable } from '@/nutrition/foods';
 import type { Candidate } from '@/nutrition/candidate';
 import { item, per100 } from './helpers';
 
@@ -73,6 +73,76 @@ describe('choose, on the shipped tables', () => {
   });
 });
 
+// Red team on 9d4f16a: the top search result always read as a full name match, so one shared word
+// was enough and only the energy check stood in the way.
+describe('choose rejects foods that only share a word', () => {
+  it.each([
+    ['acai bowl', 120], // was Ramen bowl, NFS
+    ['hot chips', 250], // was Pancakes, chocolate (hot cakes)
+    ['butter chicken', 120], // the AFCD sauce for it
+    ['butter chicken', 150], // was Chicken, liver, fried, added butter
+    ['butter chicken', 200],
+    ['chicken salt', 200], // was chicken luncheon meat, through its alias "no salt added"
+  ] as const)('%s at %i kcal per 100 g keeps the estimate', async (q, kcal) => {
+    expect(choose(q, per100({ kcal }), await search(q))).toBeNull();
+  });
+
+  it.each([220, 250, 280])('meat pie at %i kcal per 100 g: a savoury meat pie, not an empanada that lists the name', async kcal => {
+    expect(choose('meat pie', per100({ kcal }), await search('meat pie'))?.description).toMatch(/^Pie, savoury, meat/);
+  });
+
+  it('weighs rare words more: "adobo" carries "chicken adobo", "bowl" does not carry "acai bowl"', async () => {
+    const adobo = (await search('chicken adobo')).find(c => c.description === 'Adobo, with rice')!;
+    expect(adobo.cover).toBeGreaterThanOrEqual(MIN_COVER);
+    const ramen = (await search('acai bowl')).find(c => c.description === 'Ramen bowl, NFS')!;
+    expect(ramen.cover).toBeLessThan(MIN_COVER);
+  });
+
+  const tiny = (...foods: [string, string[]?][]) => new FoodIndex([{ ...checkTable(JSON.parse(readFileSync(`public/${FOOD_FILES[0]}`, 'utf8'))), groups: [{ dataType: 'Survey (FNDDS)', foods: foods.map(([name, aliases], i) => [i + 1, name, 150, 10, 10, 8, null, null, null, null, null, aliases ?? null]) }] }]);
+  const coverOf = (index: FoodIndex, q: string) => index.search(q, 5)[0]?.cover ?? 0;
+
+  it('does not count a word the name gives as added, missing or left open', () => {
+    expect(coverOf(tiny(['Chicken, liver, fried, added butter']), 'butter chicken')).toBeLessThan(MIN_COVER);
+    expect(coverOf(tiny(['Pot pie, no meat']), 'meat pie')).toBeLessThan(MIN_COVER);
+    expect(coverOf(tiny(['Pot pie, chicken (NS as to meat)']), 'meat pie')).toBeLessThan(MIN_COVER);
+    expect(coverOf(tiny(['Beverage base, added vitamins (Milo)']), 'milo')).toBe(1);
+    expect(coverOf(tiny(['Non-dairy milk']), 'milk')).toBe(1);
+    expect(coverOf(tiny(['Chicken, liver, fried, added butter']), 'chicken liver, fried, added butter')).toBe(1);
+  });
+
+  it('does not add up a word in the name and a word in an alias', () => {
+    expect(coverOf(tiny(['Chicken, luncheon meat', ['low salt', 'lean']]), 'chicken salt')).toBeLessThan(MIN_COVER);
+    expect(coverOf(tiny(['Roll, white, hard', ['Pan de sal']]), 'pandesal')).toBeGreaterThanOrEqual(MIN_COVER);
+  });
+
+  it('counts a match through an alias for less than one through the name', () => {
+    const index = tiny(['Empanada, beef', ['meat pie']], ['Pie, savoury, meat']);
+    const [a, b] = ['Empanada, beef (meat pie)', 'Pie, savoury, meat'].map(d => index.search('meat pie', 5).find(c => c.description === d)!);
+    expect(b!.cover).toBe(1);
+    expect(a!.cover).toBe(ALIAS_COVER);
+    expect(ALIAS_COVER).toBeLessThan(1);
+  });
+
+  it('rejects a product made from the food or a stand-in for it, unless the query names it', () => {
+    const full = (description: string, kcal = 150) => ({ ...cand(description, kcal), cover: 1 });
+    expect(choose('butter chicken', per100({ kcal: 150 }), [full('Sauce, butter chicken, commercial', 100)])).toBeNull();
+    expect(choose('caesar salad', per100({ kcal: 150 }), [full('Salad dressing, caesar, fat-free', 130)])).toBeNull();
+    expect(choose('orange', per100({ kcal: 47 }), [full('Orange juice, 100%', 45)])).toBeNull();
+    expect(choose('chicken, fried', per100({ kcal: 250 }), [full('Chicken, meatless, breaded, fried', 234)])).toBeNull();
+    expect(choose('hot dog', per100({ kcal: 250 }), [full('Hot dog, vegetarian', 233)])).toBeNull();
+    expect(choose('crab', per100({ kcal: 90 }), [full('Crab, imitation', 95)])).toBeNull();
+    expect(choose('soy sauce', per100({ kcal: 53 }), [full('Sauce, soy', 53)])).not.toBeNull();
+    expect(choose('orange juice', per100({ kcal: 45 }), [full('Orange juice, 100%', 45)])).not.toBeNull();
+    expect(choose('sausage, meatless', per100({ kcal: 250 }), [full('Sausage, meatless', 255)])).not.toBeNull();
+    expect(choose('spaghetti', per100({ kcal: 120 }), [full('Spaghetti with tomato sauce', 120)])).not.toBeNull();
+    expect(choose('cheese quiche', per100({ kcal: 350 }), [full('Cheese quiche, meatless', 365)])).not.toBeNull();
+  });
+
+  it('holds plain candidates to the same floor', () => {
+    expect(choose('acai bowl', per100({ kcal: 120 }), [cand('Ramen bowl', 127)])).toBeNull();
+  });
+});
+
 describe('applyCandidate', () => {
   it('never replaces label values', () => {
     const it0 = item({ source: 'label' });
@@ -107,6 +177,23 @@ describe('groundAll', () => {
     const r = await groundAll([[fried]], { search: async () => { throw new Error('offline'); } });
     expect(r.status).toBe('unavailable');
     expect(r.value[0]![0]!.source).toBe('estimate');
+  });
+
+  // Red team on 9d4f16a: the searches ran as one long task, so nothing painted and Back did nothing.
+  const three = ['rice, fried', 'egg, fried', 'banana'].map(query => item({ query }));
+
+  it('runs each search in a task of its own, so the page paints and handles input in between', async () => {
+    let ticks = 0;
+    const seen: number[] = [];
+    await groundAll([three], { search: async q => { seen.push(ticks); setTimeout(() => { ticks++; }, 0); return search(q); } });
+    expect(seen).toEqual([0, 1, 2]);
+  });
+
+  it('stops searching when the scan is cancelled between two searches', async () => {
+    const ctrl = new AbortController();
+    const seen: string[] = [];
+    await groundAll([three], { signal: ctrl.signal, search: async q => { seen.push(q); setTimeout(() => ctrl.abort(), 0); return search(q); } });
+    expect(seen).toEqual(['rice, fried']);
   });
 
   it('leaves label items untouched and does not search for them', async () => {

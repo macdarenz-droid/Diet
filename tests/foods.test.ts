@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createHash } from 'node:crypto';
 import { readFileSync, readdirSync } from 'node:fs';
 import { NUTRIENT_KEYS } from '@/core/models';
-import { FIELDS, FOOD_FILES, FoodIndex, checkTable, numericId, resetFoods, searchLocal, withEstimate, type FoodRow, type FoodTable, type LocalCandidate } from '@/nutrition/foods';
+import { FIELDS, FOOD_FILES, FoodIndex, checkTable, loadFoods, nextTask, numericId, resetFoods, searchLocal, warmFoods, withEstimate, type FoodRow, type FoodTable, type LocalCandidate } from '@/nutrition/foods';
 import { choose } from '@/nutrition/ground';
 import { COFID_DISACCHARIDE, COFID_STARCH, KJ_PER_KCAL, MAX_UNREPORTED_FIBRE, afcdAliases, cofidCarbs, cofidValue, dedupe, problems, usdaFood, type BuiltFood } from '../scripts/foods/build.mjs';
 import { per100 } from './helpers';
@@ -416,6 +416,61 @@ describe('searchLocal', () => {
     await expect(searchLocal('banana')).rejects.toThrow(/status 503/);
     vi.stubGlobal('fetch', vi.fn(async (path: string) => new Response(text(path), { status: 200 })));
     expect((await searchLocal('banana', 1)).length).toBe(1);
+  });
+
+  // Red team on 9d4f16a: building the index and its joined forms took one long task each.
+  it('builds the same index a slice at a time, pausing in between', async () => {
+    let pauses = 0;
+    const sliced = await FoodIndex.build(tables, async () => { pauses++; });
+    expect(pauses).toBeGreaterThanOrEqual(10);
+    for (const q of ['rice, white, cooked', 'pandesal', 'meat pie', 'spaghet']) expect(sliced.search(q, 12)).toEqual(index.search(q, 12));
+  });
+
+  it('prepares the joined forms a slice at a time, and gives way to a search that needs them first', async () => {
+    const built = new FoodIndex(tables);
+    let release!: () => void;
+    let pauses = 0;
+    const gate = new Promise<void>(r => { release = r; });
+    const done = built.prepare(() => { pauses++; return gate; });
+    expect(built.prepare(async () => {})).toBe(done);
+    expect(built.search('pandesal', 1)[0]!.sourceId).toBe('2707655');
+    release();
+    await done;
+    expect(pauses).toBe(1);
+    const ready = new FoodIndex(tables);
+    await ready.prepare(async () => { pauses++; });
+    expect(pauses).toBeGreaterThan(10);
+    expect(ready.search('pandesal', 3)).toEqual(index.search('pandesal', 3));
+  });
+
+  it('warms up in the background, once, so the first search finds the tables loaded', async () => {
+    const load = vi.fn(async (path: string) => JSON.parse(text(path)) as unknown);
+    const prepare = vi.spyOn(FoodIndex.prototype, 'prepare');
+    warmFoods(load);
+    warmFoods(load);
+    await loadFoods(load);
+    await vi.waitFor(() => expect(prepare).toHaveBeenCalled());
+    expect(load).toHaveBeenCalledTimes(FOOD_FILES.length);
+    prepare.mockRestore();
+  });
+
+  it('keeps quiet when a warm-up fails and lets the next search try again', async () => {
+    warmFoods(async () => { throw new Error('offline'); });
+    await new Promise(r => setTimeout(r, 0));
+    vi.stubGlobal('fetch', vi.fn(async (path: string) => new Response(text(path), { status: 200 })));
+    expect((await searchLocal('banana', 1)).length).toBe(1);
+  });
+
+  it('yields with scheduler.yield where the browser has it, else with a timer', async () => {
+    const y = vi.fn(async () => {});
+    vi.stubGlobal('scheduler', { yield: y });
+    await nextTask();
+    expect(y).toHaveBeenCalledOnce();
+    vi.unstubAllGlobals();
+    let fired = false;
+    setTimeout(() => { fired = true; }, 0);
+    await nextTask();
+    expect(fired).toBe(true);
   });
 
   it('refuses a table in an unknown shape', () => {

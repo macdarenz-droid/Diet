@@ -3,7 +3,7 @@
 import type { Item } from '@/core/models';
 import type { Candidate } from './candidate';
 import { applyCandidate, choose } from './ground';
-import { searchLocal } from './foods';
+import { nextTask, searchLocal } from './foods';
 
 /** Distinct lookups one scan may make, so text in a photo cannot make a scan crawl. */
 export const LOOKUPS_MAX = 24;
@@ -27,6 +27,8 @@ export async function groundAll(lists: Item[][], opts: { search?: Search; signal
   const found = new Map<string, Candidate[]>();
   let status: GroundStatus = 'done';
   for (const q of queries) {
+    // Each search runs in a task of its own, so the screen paints and Back is handled in between.
+    await nextTask();
     if (opts.signal?.aborted) break;
     try { found.set(q, await run(q)); } catch { status = 'unavailable'; break; }
   }

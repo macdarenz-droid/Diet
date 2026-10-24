@@ -37,18 +37,47 @@ export function energyFits(candidateKcal: number, estimateKcal: number): boolean
   return Math.abs(candidateKcal - estimateKcal) / estimateKcal <= MAX_ENERGY_OFF;
 }
 
+/** A candidate must hold at least this share of the query's words, weighted by rarity, in one of
+ * its names: one shared word ("bowl" of "acai bowl") is not a match. A wrong match is worse than
+ * none, since no match keeps Claude's estimate. */
+export const MIN_COVER = 0.7;
+
+/** A name's lead: the words before its first comma, bracket or "with" ("Spaghetti with tomato
+ * sauce" leads with spaghetti). */
+const LEAD = /[,(]| (?:with|in|on|and) /i;
+/** Words that, in the lead of a name, make it a product made from or for a food rather than the
+ * food ("Sauce, butter chicken", "Salad dressing, caesar", "Orange juice"). */
+const PRODUCT = new Set(['sauce', 'gravy', 'dressing', 'seasoning', 'stock', 'broth', 'juice', 'oil', 'babyfood', 'toddler', 'infant']);
+/** Words that make a name a stand-in for the food: anywhere ("Crab, imitation", "Egg substitute"),
+ * or with a meat in the lead ("Chicken, meatless", "Hot dog, vegetarian"; not "Lasagna, meatless"). */
+const STAND_IN = new Set(['imitation', 'substitute']);
+const MEATLESS = new Set(['meatless', 'vegetarian', 'vegan']);
+const MEAT = new Set(['meat', 'chicken', 'beef', 'pork', 'lamb', 'turkey', 'bacon', 'ham', 'sausage', 'frankfurter', 'dog', 'meatball', 'luncheon', 'steak', 'salami', 'burger', 'patty', 'fillet']);
+
+/** Whether a candidate is a product made from the food or a stand-in for it, which the query does
+ * not ask for. */
+function otherFood(description: string, q: ReadonlySet<string>): boolean {
+  const lead = tokens(description.split(LEAD)[0]!);
+  const meat = lead.some(t => MEAT.has(t));
+  return lead.some(t => PRODUCT.has(t) && !q.has(t)) || tokens(description).some(t => (STAND_IN.has(t) || (meat && MEATLESS.has(t))) && !q.has(t));
+}
+
 /** The best candidate for an item, or null to keep the estimate. */
 export function choose(query: string, estimate: Nutrients, candidates: readonly Candidate[]): Candidate | null {
   let best: { c: Candidate; s: number } | null = null;
-  // Offline search results carry a relevance score that weighs rare words and local aliases; it is
-  // relative, so it is read against the best result. Plain candidates fall back to word overlap.
+  const q = new Set(tokens(query));
+  // Search results carry an absolute cover, which decides whether a food matches at all, and a
+  // relevance score, which is relative and only ranks the matches. Plain candidates use word
+  // overlap for both.
   const top = Math.max(0, ...candidates.map(c => c.score ?? 0));
   for (const c of candidates) {
     if (!energyFits(c.per100.kcal, estimate.kcal)) continue;
-    const name = c.score !== undefined && top > 0 ? Math.max(c.score / top, nameScore(query, c.description)) : nameScore(query, c.description);
-    if (name < 0.5) continue;
+    const overlap = nameScore(query, c.description);
+    const cover = c.cover ?? Math.min(1, overlap);
+    if (cover < MIN_COVER || otherFood(c.description, q)) continue;
+    const rel = c.score !== undefined && top > 0 ? Math.max(c.score / top, overlap) : overlap;
     const off = estimate.kcal > LOW_KCAL ? Math.abs(Math.log(Math.max(c.per100.kcal, 1) / estimate.kcal)) : 0;
-    const s = name - 0.5 * off - 0.02 * c.rank;
+    const s = rel + cover - 0.5 * off - 0.02 * c.rank;
     if (!best || s > best.s) best = { c, s };
   }
   return best?.c ?? null;

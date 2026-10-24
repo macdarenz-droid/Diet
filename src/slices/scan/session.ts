@@ -5,6 +5,7 @@ import { keys, profile, recordUsage } from '@/core/store';
 import { AnalysisError, type Stage } from '@/ai/errors';
 import type { Answer, Edits } from '@/ai/prompts';
 import { groundAll, type GroundStatus } from '@/nutrition/lookup';
+import { warmFoods } from '@/nutrition/foods';
 import { rankSwaps, totals } from '@/nutrition/math';
 import type { Prepared } from './image';
 
@@ -76,6 +77,8 @@ async function run(id: string, previousAnswers?: Answer[]): Promise<void> {
   const c = new AbortController();
   ctrl = c;
   const refining = s.refining;
+  // The food tables load and index while Claude answers, so grounding can start at once.
+  warmFoods();
   try {
     let mod: typeof import('@/ai/analyze');
     try { mod = await import('@/ai/analyze'); } catch { throw new AnalysisError('reload', 'Claude client failed to load'); }
