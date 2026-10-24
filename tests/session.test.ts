@@ -148,3 +148,32 @@ describe('start', () => {
     expect(scan.value).toMatchObject({ phase: 'running', edits: { grams: {}, removed: [] }, baseKcal: 0 });
   });
 });
+
+// Red team (failure paths) on dcfa404: double logging and refines that lose the result.
+describe('logging and refine edge cases', () => {
+  it('uses the given id so a repeated save overwrites', () => {
+    const a = toMeal(base(), 1, 'scan-1')!;
+    const b = toMeal(base(), 2, 'scan-1')!;
+    expect(a.id).toBe('scan-1');
+    expect(b.id).toBe(a.id);
+  });
+
+  it('keeps the result when a refine finds no food', async () => {
+    scan.value = base();
+    next = async () => ({ analysis: { ...analysis, found: false, items: [], swaps: [] }, usage: { input: 1, output: 1, cacheRead: 0, cacheWrite: 0 } });
+    answer('Served with rice?', '1 cup');
+    await flush(); await flush();
+    expect(scan.value!.found).toBe(true);
+    expect(scan.value!.analysis!.items).toHaveLength(2);
+    expect(scan.value!.answers).toEqual([]);
+  });
+
+  it('keeps the chosen swap across a refine when it is still offered', async () => {
+    scan.value = { ...base(), selected: 's0' };
+    next = async () => refined();
+    answer('Served with rice?', '1 cup');
+    await flush(); await flush(); await flush();
+    expect(scan.value!.selected).toBe('s0');
+  });
+
+});

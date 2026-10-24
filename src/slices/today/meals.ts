@@ -16,9 +16,10 @@ export async function loadMeals(): Promise<void> {
   loaded.value = true;
 }
 
-export async function logMeal(m: Meal): Promise<void> {
-  meals.value = [m, ...meals.value].sort((a, b) => b.at - a.at);
-  try { await putMeal(m); } catch { /* kept in memory for this session */ }
+/** Saves a meal; resolves false when the device would not store it (it stays on screen until reload). */
+export async function logMeal(m: Meal): Promise<boolean> {
+  meals.value = [m, ...meals.value.filter(x => x.id !== m.id)].sort((a, b) => b.at - a.at);
+  try { await putMeal(m); return true; } catch { return false; }
 }
 
 export async function removeMeal(id: string): Promise<Meal | undefined> {

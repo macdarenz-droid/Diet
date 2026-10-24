@@ -27,6 +27,7 @@ export function failText(kind: FailKind): string {
     case 'refusal': return 'This one could not be analysed.';
     case 'truncated': return 'The response was cut short. Try again.';
     case 'invalid': return 'The response could not be read. Try again.';
+    case 'reload': return 'Part of the app did not load. Reload to continue.';
     default: return 'Something went wrong. Try again.';
   }
 }
@@ -77,7 +78,9 @@ export function Analysing() {
           <div class="row fail-actions">
             {s.error?.kind === 'auth' || s.error?.kind === 'denied'
               ? <Button variant="primary" onClick={() => { keySheet.value = 'claude'; }}>Update key</Button>
-              : <Button variant="primary" onClick={retry}>Try again</Button>}
+              : s.error?.kind === 'reload'
+                ? <Button variant="primary" onClick={() => location.reload()}>Reload</Button>
+                : <Button variant="primary" onClick={retry}>Try again</Button>}
             <Button variant="ghost" onClick={() => { cancel(); back(); }}>Cancel</Button>
           </div>
         </Card>

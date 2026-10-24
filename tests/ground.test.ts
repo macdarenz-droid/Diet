@@ -195,3 +195,23 @@ describe('lookup limits', () => {
     }
   });
 });
+
+// Red team (failure paths) on dcfa404: grounding always finishes.
+import { GROUND_BUDGET_MS } from '@/nutrition/lookup';
+import { vi } from 'vitest';
+
+describe('grounding budget', () => {
+  it('finishes with estimates when USDA hangs', async () => {
+    vi.useFakeTimers();
+    try {
+      const fried = item({ query: 'rice, fried' });
+      const run = groundAll([[fried]], { key: 'K', cache: memoryCache(), search: () => new Promise(() => {}) });
+      await vi.advanceTimersByTimeAsync(GROUND_BUDGET_MS + 10);
+      const r = await run;
+      expect(r.status).toBe('offline');
+      expect(r.value[0]![0]!.source).toBe('estimate');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});

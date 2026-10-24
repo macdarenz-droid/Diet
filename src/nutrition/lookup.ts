@@ -7,6 +7,8 @@ import { applyCandidate, choose } from './ground';
 const TTL_MS = 30 * 24 * 60 * 60 * 1000;
 export const PREFIX = 'nuance.fdc.';
 const PARALLEL = 4;
+/** The whole grounding step's time limit. */
+export const GROUND_BUDGET_MS = 20000;
 /** Cached queries kept on the device; the oldest go first. */
 export const CACHE_MAX = 300;
 /** Distinct lookups one scan may make, so text in a photo cannot spend the USDA quota or fill storage. */
@@ -85,8 +87,10 @@ export async function groundAll(lists: Item[][], opts: { key: string; cache: Cac
 
   // No key only matters when something still had to be fetched.
   if (!opts.key && todo.length) status = 'no-key';
-  if (opts.key) {
+  if (opts.key && todo.length) {
     let stopped = false;
+    // However slow USDA is, grounding gives up after this long and the rest keep Claude's estimate.
+    const budget = setTimeout(() => { if (!stopped) { stopped = true; status = 'offline'; } }, GROUND_BUDGET_MS);
     const worker = async () => {
       for (;;) {
         const q = todo.shift();
@@ -105,7 +109,11 @@ export async function groundAll(lists: Item[][], opts: { key: string; cache: Cac
         }
       }
     };
-    await Promise.all(Array.from({ length: Math.min(PARALLEL, todo.length) }, worker));
+    await Promise.race([
+      Promise.all(Array.from({ length: Math.min(PARALLEL, todo.length) }, worker)),
+      new Promise<void>(r => setTimeout(r, GROUND_BUDGET_MS)),
+    ]);
+    clearTimeout(budget);
   }
 
   const value = lists.map(items => items.map(it => {

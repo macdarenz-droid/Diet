@@ -5,7 +5,9 @@ const FILES = __FILES__;
 const CACHE = `nuance-${VERSION}`;
 
 self.addEventListener('install', event => {
-  event.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES)));
+  // cache: 'reload' skips the browser's HTTP cache (GitHub Pages serves max-age=600), so a fresh
+  // install never stores the previous build's page.
+  event.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES.map(f => new Request(f, { cache: 'reload' })))));
 });
 
 self.addEventListener('activate', event => {

@@ -15,7 +15,13 @@ function open(): Promise<IDBDatabase> {
       const db = req.result;
       if (!db.objectStoreNames.contains(STORE)) db.createObjectStore(STORE, { keyPath: 'id' }).createIndex('at', 'at');
     };
-    req.onsuccess = () => resolve(req.result);
+    req.onsuccess = () => {
+      const db = req.result;
+      // A connection the browser closes (or a newer version replaces) must not be reused.
+      db.onclose = () => { opening = null; };
+      db.onversionchange = () => { db.close(); opening = null; };
+      resolve(db);
+    };
     req.onerror = () => { opening = null; reject(req.error); };
   });
   return opening;
@@ -29,6 +35,11 @@ function tx<T>(mode: IDBTransactionMode, run: (s: IDBObjectStore) => IDBRequest<
     t.onerror = () => reject(t.error);
     t.onabort = () => reject(t.error);
   }));
+}
+
+/** Asks the browser not to evict the log under storage pressure (granted silently on most phones). */
+export function persistStorage(): void {
+  try { void navigator.storage?.persist?.(); } catch { /* not supported */ }
 }
 
 export const allMeals = (): Promise<Meal[]> => tx('readonly', s => s.getAll() as IDBRequest<Meal[]>).then(list => list.sort((a, b) => b.at - a.at));

@@ -10,6 +10,7 @@ import { initClock } from './core/clock';
 import { initViewport } from './app/viewport';
 import { prefs } from './core/store';
 import { loadMeals } from './slices/today/meals';
+import { persistStorage } from './core/db';
 import { toast } from './app/toast';
 
 function applyTheme(): void {
@@ -24,6 +25,7 @@ initRouter();
 initClock();
 initViewport();
 void loadMeals();
+persistStorage();
 render(<App />, document.getElementById('app')!);
 
 // The Android app ships its files inside the APK, so only the web build needs the service worker.

@@ -2,6 +2,11 @@
 import Anthropic from '@anthropic-ai/sdk';
 import type { Analysis, Profile } from '@/core/models';
 import { claude } from './transport';
+import { idleWatch } from '@/core/abort';
+
+/** Until the first event (the request, a retry and the first tokens) and between events after that. */
+export const FIRST_EVENT_MS = 120_000;
+export const IDLE_MS = 60_000;
 import { EFFORT, FALLBACK_BETA, MAX_TOKENS, MODEL } from './config';
 import { SYSTEM, userText, type Answer, type Edits } from './prompts';
 import { InvalidOutput, SCHEMA, parseAnalysis } from './schema';
@@ -33,7 +38,9 @@ export function buildRequest(input: AnalyzeInput) {
   return {
     model: MODEL,
     max_tokens: MAX_TOKENS,
-    thinking: { type: 'adaptive' as const },
+    // Summarised thinking is never shown; it is asked for because it streams while the model thinks,
+    // which keeps the stall watchdog fed. Thinking is billed the same either way.
+    thinking: { type: 'adaptive' as const, display: 'summarized' as const },
     output_config: { effort: EFFORT, format: { type: 'json_schema' as const, schema: SCHEMA } },
     betas: [FALLBACK_BETA],
     fallbacks: 'default' as const,
@@ -51,6 +58,8 @@ function failFrom(e: unknown): AnalysisError {
   if (e instanceof Anthropic.APIConnectionError) return new AnalysisError('network', 'Connection failed');
   if (e instanceof Anthropic.InternalServerError) return new AnalysisError('busy', 'Service busy');
   if (e instanceof Anthropic.APIError) return new AnalysisError('unknown', `Request failed (${e.status ?? 'no status'})`);
+  // fetch reports a dropped or refused connection as a TypeError; so does a stream cut mid-way.
+  if (e instanceof TypeError || (typeof navigator !== 'undefined' && navigator.onLine === false)) return new AnalysisError('network', 'Connection lost');
   if (e instanceof InvalidOutput || e instanceof SyntaxError) return new AnalysisError('invalid', 'Unreadable response');
   return new AnalysisError('unknown', e instanceof Error ? e.message : String(e));
 }
@@ -60,9 +69,14 @@ export async function analyze(input: AnalyzeInput, key: string, opts: { signal?:
   let stage: Stage = 'send';
   const to = (s: Stage) => { if (s !== stage) { stage = s; opts.onStage?.(s); } };
   opts.onStage?.('send');
+  // The SDK's own timeout stops once headers arrive; a stream that then goes quiet (a network
+  // switch, the phone asleep) would wait for ever, so silence ends it as a connection failure.
+  const watch = idleWatch(opts.signal, FIRST_EVENT_MS, IDLE_MS);
   try {
-    const stream = client.beta.messages.stream(buildRequest(input), { signal: opts.signal });
+    const stream = client.beta.messages.stream(buildRequest(input), { signal: watch.signal });
+    stream.on('connect', () => watch.kick());
     stream.on('streamEvent', ev => {
+      watch.kick();
       if (ev.type === 'content_block_start' && ev.content_block.type === 'thinking' && stage === 'send') to('think');
     });
     stream.on('text', (_delta, snapshot) => {
@@ -85,6 +99,9 @@ export async function analyze(input: AnalyzeInput, key: string, opts: { signal?:
     return { analysis, usage };
   } catch (e) {
     if (opts.signal?.aborted) throw new AnalysisError('aborted', 'Cancelled');
+    if (watch.stalled()) throw new AnalysisError('network', 'The connection went quiet');
     throw failFrom(e);
+  } finally {
+    watch.clear();
   }
 }

@@ -123,7 +123,7 @@ describe('request', () => {
   it('uses the configured model, effort, structured output and refusal fallback', () => {
     const r = buildRequest({ text: 'adobo', profile: p });
     expect(r.model).toBe(MODEL);
-    expect(r.thinking).toEqual({ type: 'adaptive' });
+    expect(r.thinking).toEqual({ type: 'adaptive', display: 'summarized' });
     expect(r.output_config).toEqual({ effort: EFFORT, format: { type: 'json_schema', schema: SCHEMA } });
     expect(r.betas).toEqual([FALLBACK_BETA]);
     expect(r.fallbacks).toBe('default');
@@ -218,5 +218,35 @@ describe('analyze', () => {
     ctrl.abort();
     const { client } = fakeClient([], new Anthropic.APIUserAbortError());
     await expect(analyze({ text: 'x', profile: p }, 'k', { client, signal: ctrl.signal })).rejects.toMatchObject({ kind: 'aborted' });
+  });
+});
+
+// Red team (failure paths) on dcfa404: a stream that goes quiet, and dropped connections.
+import { vi } from 'vitest';
+import { FIRST_EVENT_MS } from '@/ai/analyze';
+
+describe('stalls and drops', () => {
+  const p = defaultProfile('AU');
+
+  it('ends a silent stream as a connection failure', async () => {
+    vi.useFakeTimers();
+    try {
+      const client = { beta: { messages: { stream(_p: unknown, o: { signal: AbortSignal }) {
+        const s = { on() { return s; }, finalMessage: () => new Promise((_r, rej) => o.signal.addEventListener('abort', () => rej(new Anthropic.APIUserAbortError()))) };
+        return s;
+      } } } } as unknown as Pick<Anthropic, 'beta'>;
+      const run = analyze({ text: 'x', profile: p }, 'k', { client }).catch(e => e);
+      await vi.advanceTimersByTimeAsync(FIRST_EVENT_MS + 10);
+      const e = await run;
+      expect(e).toBeInstanceOf(AnalysisError);
+      expect(e.kind).toBe('network');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('reports a fetch-level failure as a connection problem', async () => {
+    const { client } = fakeClient([], new TypeError('network error'));
+    await expect(analyze({ text: 'x', profile: p }, 'k', { client })).rejects.toMatchObject({ kind: 'network' });
   });
 });

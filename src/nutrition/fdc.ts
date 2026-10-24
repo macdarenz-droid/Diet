@@ -2,6 +2,7 @@
 // response on 2026-10-24 (docs/ARCHITECTURE.md §5).
 import type { NutrientKey, Nutrients } from '@/core/models';
 import { atwater } from './math';
+import { withTimeout } from '@/core/abort';
 
 export const FDC_URL = 'https://api.nal.usda.gov/fdc/v1/foods/search';
 export const DATA_TYPES = ['Foundation', 'SR Legacy', 'Survey (FNDDS)'];
@@ -77,13 +78,19 @@ export function searchUrl(query: string, key: string, pageSize = 10): string {
   return `${FDC_URL}?${p.toString()}`;
 }
 
+/** One request may take this long before it counts as unreachable. */
+export const SEARCH_TIMEOUT_MS = 8000;
+
 export async function search(query: string, key: string, signal?: AbortSignal, fetchImpl: typeof fetch = fetch): Promise<Candidate[]> {
   let res: Response;
+  const t = withTimeout(signal, SEARCH_TIMEOUT_MS);
   try {
-    res = await fetchImpl(searchUrl(query, key), { signal });
+    res = await fetchImpl(searchUrl(query, key), { signal: t.signal });
   } catch (e) {
     if (signal?.aborted) throw e;
-    throw new FdcError('network', 'USDA could not be reached');
+    throw new FdcError('network', t.timedOut() ? 'USDA timed out' : 'USDA could not be reached');
+  } finally {
+    t.clear();
   }
   if (res.status === 429) throw new FdcError('rate', 'USDA rate limit');
   if (res.status === 401 || res.status === 403) throw new FdcError('auth', 'USDA key not accepted');

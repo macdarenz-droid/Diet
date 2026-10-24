@@ -77,14 +77,21 @@ async function run(id: string, previousAnswers?: Answer[]): Promise<void> {
   ctrl = c;
   const refining = s.refining;
   try {
-    const { analyze } = await import('@/ai/analyze');
+    let mod: typeof import('@/ai/analyze');
+    try { mod = await import('@/ai/analyze'); } catch { throw new AnalysisError('reload', 'Claude client failed to load'); }
+    const { analyze } = mod;
     const { analysis, usage } = await analyze(
       { image: s.photo ? { data: s.photo.data, mediaType: 'image/jpeg' } : undefined, text: s.text, note: s.note, answers: s.answers, edits: s.edits, profile: profile.value },
       keys.value.claude,
       { signal: c.signal, onStage: st => patch(id, { step: st }) },
     );
     recordUsage(usage, refining ? 'refine' : 'scan');
-    if (!analysis.found) { patch(id, { phase: 'ready', found: false, analysis, refining: false }); return; }
+    if (!analysis.found) {
+      // A follow-up that suddenly finds no food keeps the result already on screen.
+      if (refining && scan.value?.analysis) { patch(id, { refining: false, phase: 'ready', answers: previousAnswers ?? s.answers, error: new AnalysisError('invalid', 'No food in the refined answer') }); return; }
+      patch(id, { phase: 'ready', found: false, analysis, refining: false });
+      return;
+    }
     patch(id, { step: 'ground' });
     const lists = [analysis.items, ...analysis.swaps.map(w => w.items)];
     const { value, status } = await groundAll(lists, { key: keys.value.usda, cache: localCache(), signal: c.signal });
@@ -92,7 +99,10 @@ async function run(id: string, previousAnswers?: Answer[]): Promise<void> {
     const [items, ...swapItems] = value;
     const edits = scan.value?.edits ?? s.edits;
     const grounded: Analysis = { ...analysis, items: applyEdits(items!, edits), swaps: analysis.swaps.map((w, i) => ({ ...w, items: swapItems[i]! })) };
-    patch(id, { phase: 'ready', found: true, analysis: grounded, baseKcal: totals(items!).kcal, ground: status, refining: false, selected: null });
+    const prev = scan.value;
+    const chosenTitle = prev?.selected ? prev.analysis?.swaps.find(w => w.id === prev.selected)?.title : undefined;
+    const selected = chosenTitle ? grounded.swaps.find(w => w.title === chosenTitle)?.id ?? null : null;
+    patch(id, { phase: 'ready', found: true, analysis: grounded, baseKcal: totals(items!).kcal, ground: status, refining: false, selected });
   } catch (e) {
     // Cancelled, or replaced by a newer run (an answer given while this one was still going).
     if (c.signal.aborted) return;
@@ -168,14 +178,14 @@ export function select(id: string | null): void {
 }
 
 /** The meal to log: the chosen swap (scaled to the corrected portion) if there is one, else the meal as edited. */
-export function toMeal(s: Scan, at = Date.now()): Meal | null {
+export function toMeal(s: Scan, at = Date.now(), id: string = uid()): Meal | null {
   if (!s.analysis) return null;
   const meal = totals(s.analysis.items);
   const ratio = s.baseKcal > 0 ? meal.kcal / s.baseKcal : 1;
   const sw = s.selected ? s.analysis.swaps.find(w => w.id === s.selected) : undefined;
   const items = sw ? scaleItems(sw.items, ratio) : s.analysis.items;
   return {
-    id: uid(),
+    id,
     at,
     dish: sw ? sw.title : s.analysis.dish,
     kind: s.analysis.kind,

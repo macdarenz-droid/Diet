@@ -2,7 +2,7 @@
 // is fetched on the first scan instead of at start-up.
 export type Stage = 'send' | 'think' | 'items' | 'swaps';
 
-export type FailKind = 'auth' | 'rate' | 'busy' | 'network' | 'refusal' | 'truncated' | 'invalid' | 'denied' | 'aborted' | 'unknown';
+export type FailKind = 'auth' | 'rate' | 'busy' | 'network' | 'refusal' | 'truncated' | 'invalid' | 'denied' | 'aborted' | 'reload' | 'unknown';
 
 export interface Usage { input: number; output: number; cacheRead: number; cacheWrite: number }
 

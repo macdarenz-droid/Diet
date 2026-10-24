@@ -19,4 +19,9 @@ const styles = [...html.matchAll(/<style>([\s\S]*?)<\/style>/g)].map(m => `'sha2
 for (const h of styles) if (!policy['style-src']?.includes(h)) fail(`style-src is missing ${h}`);
 if (/<script(?![^>]*\bsrc=)[^>]*>/.test(html)) fail('an inline <script> would be blocked by script-src');
 if (html.includes('<!--csp-->')) fail('the CSP placeholder was not replaced');
+const sw = readFileSync('dist/sw.js', 'utf8');
+const files = JSON.parse(sw.match(/const FILES = (\[.*?\]);/s)[1]);
+const refs = [...html.matchAll(/(?:src|href)="\.\/([^"]+)"/g)].map(m => m[1]);
+for (const r of refs) if (!files.includes(r)) fail(`index.html loads ${r}, which the service worker does not precache`);
+console.log(`verify-dist: service worker precaches all ${refs.length} files the page loads`);
 console.log(`verify-dist: CSP ok (connect-src ${hosts.join(', ')}; ${styles.length} inline style hash)`);

@@ -70,7 +70,13 @@ let ignorePops = 0;
 
 export function initRouter(): void {
   if (!hasHistory()) return;
-  try { history.replaceState({ route: 'today' }, ''); } catch { /* sandboxed */ }
+  try {
+    // A reload on a pushed screen or an open sheet leaves its entry on top of Today's; step back onto
+    // it so the first Back after a reload does something. Tabs replace their entry, so they never do.
+    const st = history.state as { route?: Route; sheet?: string } | null;
+    if (st && (st.sheet || st.route === 'analysing' || st.route === 'result') && history.length > 1) { ignorePops++; history.back(); }
+    else history.replaceState({ route: 'today' }, '');
+  } catch { /* sandboxed */ }
   window.addEventListener('popstate', e => {
     if (ignorePops > 0) { ignorePops--; return; }
     const top = sheets.pop();

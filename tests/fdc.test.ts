@@ -65,3 +65,22 @@ describe('search', () => {
     expect(await search('fried rice', 'K', undefined, f)).toHaveLength(3);
   });
 });
+
+// Red team (failure paths) on dcfa404: a USDA request that never answers.
+import { SEARCH_TIMEOUT_MS } from '@/nutrition/fdc';
+
+describe('search timeout', () => {
+  it('gives up after the timeout and reports the network', async () => {
+    vi.useFakeTimers();
+    try {
+      const f = vi.fn((_u: string, init?: RequestInit) => new Promise<Response>((_r, rej) => init?.signal?.addEventListener('abort', () => rej(new DOMException('aborted', 'AbortError')))));
+      const run = search('rice', 'K', undefined, f as unknown as typeof fetch).catch(e => e);
+      await vi.advanceTimersByTimeAsync(SEARCH_TIMEOUT_MS + 10);
+      const e = await run;
+      expect(e).toBeInstanceOf(FdcError);
+      expect(e.kind).toBe('network');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});
